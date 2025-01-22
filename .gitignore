@@ -170,3 +170,4 @@ cython_debug/
 # PyPI configuration file
 .pypirc
 uv.lock
+test-time-compute/
