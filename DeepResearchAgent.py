@@ -16,6 +16,8 @@ from dataclasses import dataclass
 from pydantic_ai.models.gemini import GeminiModel
 from datetime import date
 from tqdm import tqdm  # For progress bar
+from markitdown import MarkItDown
+
 
 def is_pdf_url(url, timeout=5):
     try:
@@ -31,49 +33,6 @@ def is_pdf_url(url, timeout=5):
 
     except requests.exceptions.RequestException:
         return False
-
-def download_pdf(pdf_url, filename="downloaded_pdf.pdf", download_dir=".", timeout=10):
-    """Downloads a PDF file from a given URL and saves it locally with enhanced features.
-
-    Args:
-        pdf_url: The URL of the PDF file.
-        filename: The name to save the PDF file as (optional, defaults to "downloaded_pdf.pdf").
-        download_dir: The directory to save the PDF file to (optional, defaults to current directory).
-        timeout:  Timeout in seconds for the request (optional, defaults to 10 seconds).
-    """
-    try:
-        response = requests.get(pdf_url, stream=True, timeout=timeout) # Added timeout
-        response.raise_for_status() # Raise HTTPError for bad responses (4xx or 5xx)
-
-        file_path = os.path.join(download_dir, filename) # Construct full file path
-        total_size_in_bytes = int(response.headers.get('content-length', 0)) # Get file size from headers
-        block_size = 1024 # 1KB blocks
-
-        with open(file_path, 'wb') as pdf_file, tqdm(
-            desc=filename,
-            total=total_size_in_bytes,
-            unit='iB',
-            unit_scale=True,
-            unit_divisor=1024,
-        ) as progress_bar: # Use tqdm for progress bar
-            for chunk in response.iter_content(chunk_size=block_size):
-                if chunk: # filter out keep-alive new chunks
-                    progress_bar.update(len(chunk))
-                    pdf_file.write(chunk)
-
-        print(f"Successfully downloaded PDF to {file_path}")
-
-    except requests.exceptions.HTTPError as http_err:
-        print(f"HTTP error occurred: {http_err}") # More specific HTTP error message
-        print(f"Status code: {response.status_code}") # Print status code for debugging
-    except requests.exceptions.ConnectionError as conn_err:
-        print(f"Connection error occurred: {conn_err}")
-    except requests.exceptions.Timeout as timeout_err:
-        print(f"Timeout error occurred: {timeout_err}")
-    except requests.exceptions.RequestException as req_err:
-        print(f"Request error occurred: {req_err}")
-    except Exception as e: # Catch any other potential errors
-        print(f"An unexpected error occurred: {e}")
 
 def get_perplexity_search_results(query):
     api_key = os.environ.get("PERPLEXITY_API_KEY")
@@ -135,10 +94,12 @@ def get_google_search_results(query, num_results=10):
 
     return response
 
-async def crawl_website_async(url_webpage, topic_folder_name):
+async def crawl_website_async(url_webpage):
     if is_pdf_url(url_webpage):
-        download_pdf(url_webpage, filename="my_document.pdf", download_dir="./topic_folder_name", timeout=15)
-        return None
+        md = MarkItDown()
+        result = md.convert(url_webpage)
+        
+        return result.text_content
         
     async with AsyncWebCrawler() as crawler:
         result = await crawler.arun(
@@ -146,8 +107,8 @@ async def crawl_website_async(url_webpage, topic_folder_name):
         )
         return result.markdown
 
-def crawl_website(url_webpage, topic_folder_name):
-    return asyncio.run(crawl_website_async(url_webpage, topic_folder_name))
+def crawl_website(url_webpage):
+    return asyncio.run(crawl_website_async(url_webpage))
 
 # Only run this block for Gemini Developer API
 client = genai.Client()
@@ -174,7 +135,6 @@ class ResearchDeps:
     research_topic: str = Field(description="The research topic of the document.")
     document_type: str = Field(description="The type of document for the table of content (paper/report/general document/webpage).")
     document_number_of_pages: int = Field(description="A rough estimate of how many pages the report will have. The table of content needs to reflect that.")
-
 
 
 table_of_content_agent = Agent(
