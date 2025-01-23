@@ -1,10 +1,7 @@
 import os
-import time
 from os.path import join, exists
-from os import listdir, makedirs
-from datetime import datetime
+from os import makedirs
 from google import genai
-from google.genai import types
 from openai import OpenAI
 import requests
 import json
@@ -14,10 +11,7 @@ from crawl4ai import *
 from pydantic_ai import Agent, RunContext
 from dataclasses import dataclass
 from pydantic_ai.models.gemini import GeminiModel
-from datetime import date
-from tqdm import tqdm  # For progress bar
 from markitdown import MarkItDown
-
 
 def is_pdf_url(url, timeout=5):
     try:
