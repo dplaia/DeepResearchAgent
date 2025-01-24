@@ -17,7 +17,17 @@ from pydantic_ai.models.gemini import GeminiModel
 from markitdown import MarkItDown
 from config import Config
 
-# Create a function that counts the lenght of a string AI!
+def count_string_length(s: str) -> int:
+    """
+    Counts the length of a given string.
+
+    Args:
+        s: The string to count the length of.
+
+    Returns:
+        The length of the string.
+    """
+    return len(s)
 
 def is_pdf_url(url: str, timeout: int = Config.REQUEST_TIMEOUT) -> bool:
     """
