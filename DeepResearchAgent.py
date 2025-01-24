@@ -82,7 +82,8 @@ def get_perplexity_search_results(query: str) -> Tuple[str, List[str]]:
     ]
 
     try:
-        # AI: Add a comment here that describes ...
+        # ai: Describe in form of a commen what ...
+
         client = OpenAI(
             api_key=api_key, 
             base_url=Config.PERPLEXITY_BASE_URL
@@ -98,7 +99,7 @@ def get_perplexity_search_results(query: str) -> Tuple[str, List[str]]:
 
         for k, citation in enumerate(citations):
             message += f"[{k+1}] {citation}\n"
-        # what this code does AI!
+        # ... this code does ai!
         return message, citations
 
     except Exception as e:
