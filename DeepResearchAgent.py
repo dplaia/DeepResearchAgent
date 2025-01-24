@@ -141,7 +141,7 @@ table_of_content_agent = Agent(
 
     Use all tools to get an overview about the topic, then create the table of content for the report/paper/document.
     The table of content needs to contain the most interessting and important parts of the topic based on the desired page count of the report (more details for more report pages).
-    """
+    """-
 )
 
 @table_of_content_agent.system_prompt  
@@ -241,10 +241,6 @@ def google_search(search_query: str, topic_folder_name: str) -> dict:
 
     return document_data
 
-async def run_agent(research_topic, document_type, document_number_of_pages):
-    result = await table_of_content_agent.run('Write a table of content for a scientific report.', deps=ResearchDeps(research_topic=research_topic, document_type=document_type, document_number_of_pages=document_number_of_pages))
-    return result
-
 def write_document(result):
     text_summary = result.data.text_summary
     additional_notes = result.data.additional_notes
@@ -291,6 +287,10 @@ def write_document(result):
     # Save document to file
     with open("document.md", "w") as f:
         f.write(document_text)
+
+async def run_agent(research_topic, document_type, document_number_of_pages):
+    result = await table_of_content_agent.run('Write a table of content for a scientific report.', deps=ResearchDeps(research_topic=research_topic, document_type=document_type, document_number_of_pages=document_number_of_pages))
+    return result
 
 if __name__ == "__main__":
     research_topic = "LLM Agents and the impact on the job market"
