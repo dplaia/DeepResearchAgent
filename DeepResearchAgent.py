@@ -7,7 +7,7 @@ from os import makedirs
 from pathvalidate import sanitize_filename
 from pydantic import BaseModel, Field, HttpUrl
 from openai import OpenAI
-import google.generativeai as genai
+from google import genai
 import requests
 from requests.exceptions import RequestException
 from crawl4ai import *
@@ -83,7 +83,6 @@ def get_perplexity_search_results(query: str) -> Tuple[str, List[str]]:
 
     try:
         # Create an OpenAI client using the provided API key and base URL
-
         client = OpenAI(
             api_key=api_key, 
             base_url=Config.PERPLEXITY_BASE_URL
@@ -99,7 +98,7 @@ def get_perplexity_search_results(query: str) -> Tuple[str, List[str]]:
 
         for k, citation in enumerate(citations):
             message += f"[{k+1}] {citation}\n"
-        # This code appends each citation to the message, formatting them as a numbered list
+
         return message, citations
 
     except Exception as e:
@@ -179,8 +178,7 @@ table_of_content_agent = Agent(
 
     Use all tools to get an overview about the topic, then create the table of content for the report/paper/document.
     The table of content needs to contain the most interessting and important parts of the topic based on the desired page count of the report (more details for more report pages).
-    """-
-)
+    """)
 
 @table_of_content_agent.system_prompt  
 async def get_system_prompt(ctx: RunContext[ResearchDeps]) -> str:  
