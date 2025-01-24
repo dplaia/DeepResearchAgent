@@ -1,19 +1,39 @@
 import os
+import asyncio
+import json
+from typing import Dict, List, Optional, Tuple
 from os.path import join, exists
 from os import makedirs
-from google import genai
+from pathvalidate import sanitize_filename
+from pydantic import BaseModel, Field, HttpUrl
 from openai import OpenAI
+import google.generativeai as genai
 import requests
-import json
-from pydantic import BaseModel, Field
-import asyncio
+from requests.exceptions import RequestException
 from crawl4ai import *
 from pydantic_ai import Agent, RunContext
 from dataclasses import dataclass
 from pydantic_ai.models.gemini import GeminiModel
 from markitdown import MarkItDown
+from config import Config
 
-def is_pdf_url(url, timeout=5):
+def is_pdf_url(url: str, timeout: int = Config.REQUEST_TIMEOUT) -> bool:
+    """
+    Determines if a URL points to a PDF document
+    
+    Args:
+        url: Web address to check
+        timeout: Request timeout in seconds
+        
+    Returns:
+        True if content is PDF, False otherwise
+        
+    Raises:
+        ValueError: For invalid URL format
+    """
+    if not url.startswith(('http://', 'https://')):
+        raise ValueError("Invalid URL format")
+        
     try:
         # Try HEAD first to avoid downloading content
         response = requests.head(url, allow_redirects=True, timeout=timeout)
@@ -25,14 +45,27 @@ def is_pdf_url(url, timeout=5):
         content_type = response.headers.get('Content-Type', '').lower()
         return 'application/pdf' in content_type
 
-    except requests.exceptions.RequestException:
+    except RequestException as e:
+        print(f"Error checking PDF URL: {str(e)}")
         return False
 
-def get_perplexity_search_results(query):
+def get_perplexity_search_results(query: str) -> Tuple[str, List[str]]:
+    """
+    Searches Perplexity API with error handling
+    
+    Args:
+        query: Search query string
+        
+    Returns:
+        Tuple of (message text, citation list)
+        
+    Raises:
+        ValueError: If API key is missing
+        ConnectionError: If API request fails
+    """
     api_key = os.environ.get("PERPLEXITY_API_KEY")
-
     if not api_key:
-        print("PERPLEXITY_API_KEY not found in environment variables.")
+        raise ValueError("PERPLEXITY_API_KEY environment variable missing")
 
     messages = [
         {
@@ -44,28 +77,31 @@ def get_perplexity_search_results(query):
         },
         {   
             "role": "user",
-            "content": (
-                query
-            ),
+            "content": query,
         },
     ]
 
-    client = OpenAI(api_key=api_key, base_url="https://api.perplexity.ai")
+    try:
+        client = OpenAI(
+            api_key=api_key, 
+            base_url=Config.PERPLEXITY_BASE_URL
+        )
 
-    # chat completion without streaming
-    response = client.chat.completions.create(
-        model="sonar-pro",
-        messages=messages,
-    )
+        response = client.chat.completions.create(
+            model="sonar-pro",
+            messages=messages,
+        )
 
-    message = response.choices[0].message.content + "\n\n"
-    citations = response.citations
+        message = response.choices[0].message.content + "\n\n"
+        citations = response.citations
 
-    for k, citation in enumerate(citations):
-        message += f"[{k+1}] {citation}\n"
-        #print(f"[{k+1}] {citation}")
+        for k, citation in enumerate(citations):
+            message += f"[{k+1}] {citation}\n"
 
-    return message, citations
+        return message, citations
+
+    except Exception as e:
+        raise ConnectionError(f"Perplexity API request failed: {str(e)}")
 
 def get_google_search_results(query, num_results=10):
     api_key = os.environ.get("SERPER_API_KEY")
