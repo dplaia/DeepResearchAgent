@@ -17,17 +17,7 @@ from pydantic_ai.models.gemini import GeminiModel
 from markitdown import MarkItDown
 from config import Config
 
-def count_string_length(s: str) -> int:
-    """
-    Counts the length of a given string.
-
-    Args:
-        s: The string to count the length of.
-
-    Returns:
-        The length of the string.
-    """
-    return len(s)
+# Write a function that calculates how much times did past after booting the computer (Linux) AI?
 
 def is_pdf_url(url: str, timeout: int = Config.REQUEST_TIMEOUT) -> bool:
     """
@@ -94,6 +84,7 @@ def get_perplexity_search_results(query: str) -> Tuple[str, List[str]]:
     ]
 
     try:
+        # AI: Add a comment here that describes ...
         client = OpenAI(
             api_key=api_key, 
             base_url=Config.PERPLEXITY_BASE_URL
@@ -109,7 +100,7 @@ def get_perplexity_search_results(query: str) -> Tuple[str, List[str]]:
 
         for k, citation in enumerate(citations):
             message += f"[{k+1}] {citation}\n"
-
+        # what this code does AI!
         return message, citations
 
     except Exception as e:
