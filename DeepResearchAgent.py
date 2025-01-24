@@ -17,6 +17,8 @@ from pydantic_ai.models.gemini import GeminiModel
 from markitdown import MarkItDown
 from config import Config
 
+# Create a function that counts the lenght of a string AI!
+
 def is_pdf_url(url: str, timeout: int = Config.REQUEST_TIMEOUT) -> bool:
     """
     Determines if a URL points to a PDF document
