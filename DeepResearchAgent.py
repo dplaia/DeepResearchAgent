@@ -17,8 +17,6 @@ from pydantic_ai.models.gemini import GeminiModel
 from markitdown import MarkItDown
 from config import Config
 
-# Write a function that calculates how much times did past after booting the computer (Linux) AI?
-
 def is_pdf_url(url: str, timeout: int = Config.REQUEST_TIMEOUT) -> bool:
     """
     Determines if a URL points to a PDF document
