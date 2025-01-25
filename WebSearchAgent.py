@@ -16,15 +16,12 @@ from pydantic_ai.models.gemini import GeminiModel
 from dataclasses import dataclass
 import requests
 import json
-from tenacity import retry, stop_after_attempt, wait_exponential
 import httpx
 
 class Response(BaseModel):
     additional_notes: str = Field(description="Additional notes or observations.")
      
-flash1_model = "gemini-1.5-flash"
-flash2_model = "gemini-2.0-flash-exp"
-model = GeminiModel(flash2_model)
+model = GeminiModel(Config.FLASH2_MODEL)
 
 system_prompt = """abc"""
 agent = Agent(
@@ -75,9 +72,7 @@ def save_files(topic_folder_name: str, json_response: dict, search_query: str):
         with open(join(topic_folder_name, filename), "w") as f:
             f.write(markdown)
 
-@agent.tool_plain
-@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
-async def google_general_search_async(search_query: str, time_span: Optional[str] = None) -> Optional[dict]:
+async def google_general_search(search_query: str, time_span: Optional[str] = None) -> Optional[dict]:
     """Async version of google_general_search"""
     if not search_query.strip():
         raise ValueError("Search query cannot be empty")
@@ -104,64 +99,6 @@ async def google_general_search_async(search_query: str, time_span: Optional[str
         response.raise_for_status()
         return response.json()
 
-@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
-def google_general_search(search_query: str, time_span: Optional[str] = None) -> Optional[dict]:
-    """Uses the Serper API to retrieve google results based on a string query.
-    
-    Raises:
-        ValueError: If search query is empty or time_span is invalid
-        HTTPError: If the API request fails
-    Certain search results could be faulty or irrelevant, please ignore these results.
-
-    Args:
-        search_query (str): The google query string. It needs to be suited for the given research topic.
-        time_span (str, optional): Time filter for search results. Options:
-            - "qdr:h" (Past hour)
-            - "qdr:d" (Past 24 hours)
-            - "qdr:w" (Past Week)
-            - "qdr:m" (Past Month)
-            - "qdr:y" (Past Year)
-            If None, no time filter is applied.
-    
-    Returns:
-        document_data: A dictionary with the following fields:
-            - 'topic': The research topic (=search_query)
-            - 'link': The webpage link
-            - 'snippet': A short snippet of the webpage
-            - 'date': The date of the webpage
-            - 'position': Element position
-            - 'markdown': The markdown text (webpage content)
-            - 'filename': filename (saved in folder with name=topic_folder_name)
-    """
-    if not search_query.strip():
-        raise ValueError("Search query cannot be empty")
-    if time_span and time_span not in ["qdr:h", "qdr:d", "qdr:w", "qdr:m", "qdr:y"]:
-        raise ValueError("Invalid time span value")
-        
-    num_results = 10
-
-    payload = {
-        "q": search_query,
-        "num": num_results
-    }
-    
-    if time_span:
-        payload["tbs"] = time_span
-        
-    payload = json.dumps(payload)
-
-    headers = {
-    'X-API-KEY': Config.SERPER_API_KEY,
-    'Content-Type': 'application/json'
-    }
-
-    response = requests.request("POST", Config.SERPER_BASE_URL, headers=headers, data=payload)
-    response.raise_for_status()  # Will raise HTTPError for 4xx/5xx responses
-    json_response = response.json()
-
-    return json_response
-
-@agent.tool_plain
 def google_scholar_search(search_query: str, topic_folder_name: str, time_span: str = None, num_pages: int = 1) -> dict:
     """Uses the Serper API to retrieve google scholar results based on a string query.
     Certain search results could be faulty or irrelevant, please ignore these results.
@@ -205,7 +142,6 @@ class PerplexityResult(TypedDict):
     test_response: str
     citations: list[str]
 
-@agent.tool_plain
 def perplexity_search(search_query: str) -> PerplexityResult | None:
     """Uses the Perplexity API to perform a search and generate a response with citations.
 
@@ -257,7 +193,6 @@ def perplexity_search(search_query: str) -> PerplexityResult | None:
         print(f"Perplexity search failed: {e}")
         return None
 
-@agent.tool_plain
 def papers_with_code_search(query: str, items_per_page: int = 200) -> dict | None:
     """
     Search papers with the given query and return the results as a dictionary.
@@ -314,7 +249,7 @@ def initialize_agent(selected_tools: List[str] = None):
     
     # Create tool list based on selection
     all_tools = {
-        "google_general": google_general_search_async,
+        "google_general": google_general_search,
         "scholar": google_scholar_search,
         "perplexity": perplexity_search,
         "papers_with_code": papers_with_code_search
