@@ -18,33 +18,6 @@ import requests
 import json
 from tenacity import retry, stop_after_attempt, wait_exponential
 import httpx
-from threading import Lock
-
-class ToolRegistry:
-    _tools = {}
-    _lock = Lock()
-    
-    @classmethod
-    def register(cls, name: str, description: str = None, category: str = "search"):
-        def decorator(func):
-            func.metadata = {
-                "name": name,
-                "description": description or func.__doc__,
-                "category": category
-            }
-            with cls._lock:
-                cls._tools[name] = func
-            return func
-        return decorator
-    
-    @classmethod
-    def get_tools(cls, tool_names: List[str]):
-        tools = []
-        for name in tool_names:
-            if name not in cls._tools:
-                raise ValueError(f"Tool '{name}' not registered")
-            tools.append(cls._tools[name])
-        return tools
 
 class Response(BaseModel):
     additional_notes: str = Field(description="Additional notes or observations.")
@@ -102,7 +75,7 @@ def save_files(topic_folder_name: str, json_response: dict, search_query: str):
         with open(join(topic_folder_name, filename), "w") as f:
             f.write(markdown)
 
-@ToolRegistry.register("google_general")
+@agent.tool_plain
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
 async def google_general_search_async(search_query: str, time_span: Optional[str] = None) -> Optional[dict]:
     """Async version of google_general_search"""
@@ -188,7 +161,7 @@ def google_general_search(search_query: str, time_span: Optional[str] = None) ->
 
     return json_response
 
-@ToolRegistry.register("scholar")
+@agent.tool_plain
 def google_scholar_search(search_query: str, topic_folder_name: str, time_span: str = None, num_pages: int = 1) -> dict:
     """Uses the Serper API to retrieve google scholar results based on a string query.
     Certain search results could be faulty or irrelevant, please ignore these results.
@@ -232,7 +205,7 @@ class PerplexityResult(TypedDict):
     test_response: str
     citations: list[str]
 
-@ToolRegistry.register("perplexity")
+@agent.tool_plain
 def perplexity_search(search_query: str) -> PerplexityResult | None:
     """Uses the Perplexity API to perform a search and generate a response with citations.
 
@@ -284,7 +257,7 @@ def perplexity_search(search_query: str) -> PerplexityResult | None:
         print(f"Perplexity search failed: {e}")
         return None
 
-@ToolRegistry.register("papers_with_code")
+@agent.tool_plain
 def papers_with_code_search(query: str, items_per_page: int = 200) -> dict | None:
     """
     Search papers with the given query and return the results as a dictionary.
@@ -338,19 +311,25 @@ def papers_with_code_search(query: str, items_per_page: int = 200) -> dict | Non
 
 def initialize_agent(selected_tools: List[str] = None):
     global agent
-    if selected_tools is None:
-        selected_tools = list(ToolRegistry._tools.keys())
-        
-    # Create base agent first
+    
+    # Create tool list based on selection
+    all_tools = {
+        "google_general": google_general_search_async,
+        "scholar": google_scholar_search,
+        "perplexity": perplexity_search,
+        "papers_with_code": papers_with_code_search
+    }
+    
+    selected = selected_tools or list(all_tools.keys())
+    tools_list = [all_tools[name] for name in selected]
+
+    # Create agent with selected tools
     agent = Agent(
         model,
         result_type=Response,
-        system_prompt=system_prompt
+        system_prompt=system_prompt,
+        tools=tools_list
     )
-    
-    # Register selected tools
-    for tool_func in ToolRegistry.get_tools(selected_tools):
-        agent.tool_plain(tool_func)
 
 async def run_agent(selected_tools: List[str] = None):
     initialize_agent(selected_tools)  # Initialize with selected tools

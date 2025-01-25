@@ -18,6 +18,14 @@ class Config(BaseSettings):
     PAPERS_WITH_CODE_CSRF_TOKEN: str = Field(default="2ix1PR0FtUWIW5ePo08I3vhgHsvJ6fpqj0x1Ijjo4egxiofnUBzkX67bnHwbNd8G")
     PERPLEXITY_API_KEY: str = Field(..., env="PERPLEXITY_API_KEY")
     
+    # Tool Descriptions
+    TOOL_DESCRIPTIONS: Final = {
+        "google_general": "General web search using Google via Serper API",
+        "scholar": "Academic search using Google Scholar",
+        "perplexity": "LLM-powered search with Perplexity AI",
+        "papers_with_code": "Research paper search with code implementations"
+    }
+    
     # Model Settings
     FLASH1_MODEL: str = Field(default="gemini-1.5-flash")
     FLASH2_MODEL: str = Field(default="gemini-2.0-flash-exp")
