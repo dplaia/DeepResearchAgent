@@ -172,37 +172,32 @@ class PerplexityResult(TypedDict):
     test_response: str
     citations: list[str]
 
-def get_perplexity_search_results(query: str) -> Tuple[str, List[str]]:
-    """
-    Searches Perplexity API with error handling
-    
-    Args:
-        query: Search query string
-        
-    Returns:
-        Tuple of (message text, citation list)
-        
-    Raises:
-        ValueError: If API key is missing
-        ConnectionError: If API request fails
-    """
+@agent.tool_plain
+def perplexity_search(search_query: str) -> PerplexityResult | None:
+    """Uses the Perplexity API to perform a search and generate a response with citations.
 
+    Args:
+        search_query (str): The query string for Perplexity. It should be crafted to
+            effectively utilize Perplexity's LLM processing of web content.
+
+    Returns:
+        PerplexityResult | None: A dictionary containing:
+            - 'test_response' (str): The text response from Perplexity, including citations
+            - 'citations' (list[str]): List of citation URLs
+            Returns None if the search fails.
+    """
     messages = [
         {
             "role": "system",
-            "content": (
-                "You are an artificial intelligence assistant and you need to "
-                "engage in a helpful, detailed, polite conversation with a user."
-            ),
+            "content": "You are an artificial intelligence assistant that engages in helpful, detailed conversations.",
         },
         {   
             "role": "user",
-            "content": query,
+            "content": search_query,
         },
     ]
 
     try:
-        # Create an OpenAI client using the provided API key and base URL
         client = OpenAI(
             api_key=Config.PERPLEXITY_API_KEY, 
             base_url=Config.PERPLEXITY_BASE_URL
@@ -214,35 +209,17 @@ def get_perplexity_search_results(query: str) -> Tuple[str, List[str]]:
         )
 
         message = response.choices[0].message.content + "\n\n"
-        citations = response.citations
+        citations = [citation['url'] for citation in response.citations] if hasattr(response, 'citations') else []
 
-        for k, citation in enumerate(citations):
-            message += f"[{k+1}] {citation}\n"
+        # Format citations in the message
+        for i, url in enumerate(citations, 1):
+            message += f"[{i}] {url}\n"
 
-        return message, citations
+        return {
+            'test_response': message.strip(),
+            'citations': citations
+        }
 
-    except Exception as e:
-        raise ConnectionError(f"Perplexity API request failed: {str(e)}")
-
-
-@agent.tool_plain
-def perplexity_search(search_query: str) -> PerplexityResult | None:
-    """Uses the Serper API to retrieve google results based on a string query.
-    Certain search results could be faulty or irrelevant, please ignore these results.
-
-    Args:
-        search_query (str): The Perplexity query string. Perplexity uses an LLM to do the processing of webpages. Use a query text that is most suitable for this.
-    
-    Returns:
-        search_result: A dictionary with the following fields:
-            - 'test_response' (str): The text response from the Perplexity LLM with citations in the form [1], [2], etc.
-            - 'citations' (list[str]): A list of citations used in the test_response
-
-    """
-
-    try:
-        test_response, citations = get_perplexity_search_results(search_query)
-        return {'test_response': test_response, 'citations': citations}
     except Exception as e:
         print(f"Perplexity search failed: {e}")
         return None
