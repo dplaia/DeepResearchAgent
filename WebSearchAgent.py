@@ -101,12 +101,11 @@ def save_files(topic_folder_name: str, json_response: dict, search_query: str):
         with open(join(topic_folder_name, filename), "w") as f:
             f.write(markdown)
 
-@ToolRegistry.register("google_general")
 from tenacity import retry, stop_after_attempt, wait_exponential
-
-@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
 import httpx
 
+@ToolRegistry.register("google_general")
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
 async def google_general_search_async(search_query: str, time_span: Optional[str] = None) -> Optional[dict]:
     """Async version of google_general_search"""
     if not search_query.strip():
