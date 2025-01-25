@@ -10,19 +10,60 @@ from openai import OpenAI
 from pydantic import BaseModel, Field
 import asyncio
 from crawl4ai import *
-from pydantic_ai import Agent, RunContext, ModelRetry, UnexpectedModelBehavior, capture_run_messages
+from pydantic_ai import Agent, UnexpectedModelBehavior, capture_run_messages
 from pydantic_ai.models.gemini import GeminiModel
 from dataclasses import dataclass
 import requests
 import json
 
-def google_search(search_query: str, topic_folder_name: str, time_span: str = None) -> dict:
+async def crawl_website_async(url_webpage):
+    if is_pdf_url(url_webpage):
+        md = MarkItDown()
+        result = md.convert(url_webpage)
+        
+        return result.text_content
+        
+    async with AsyncWebCrawler() as crawler:
+        result = await crawler.arun(
+            url=url_webpage,
+        )
+        return result.markdown
+
+def crawl_website(url_webpage):
+    return asyncio.run(crawl_website_async(url_webpage))
+    
+def save_files(topic_folder_name: str):
+    # Create folder if not exists
+    if not exists(topic_folder_name):
+        makedirs(topic_folder_name)
+
+    document_data = {}
+
+    for result in json_response['organic']:
+        title = result.get('title', '').replace("/", " - ")
+        link = result.get('link', '')
+        markdown = crawl_website(link) if link else ''
+        filename = title + ".md"
+
+        document_data[title] = {
+            'topic': search_query,
+            'link': link,
+            'snippet': result.get('snippet', ''),
+            'date': result.get('date', ''),
+            'position': result.get('position', 0),
+            'markdown': markdown,
+            'filename': filename
+        }
+
+        with open(join(topic_folder_name, filename), "w") as f:
+            f.write(markdown)
+
+def google_general_search(search_query: str, time_span: str = None) -> dict:
     """Uses the Serper API to retrieve google results based on a string query.
     Certain search results could be faulty or irrelevant, please ignore these results.
 
     Args:
         search_query (str): The google query string. It needs to be suited for the given research topic.
-        topic_folder_name (str): A suitable name for a folder (all search results are saved in this folder). It needs to be a valid folder name.
         time_span (str, optional): Time filter for search results. Options:
             - "qdr:h" (Past hour)
             - "qdr:d" (Past 24 hours)
@@ -68,32 +109,46 @@ def google_search(search_query: str, topic_folder_name: str, time_span: str = No
     response = requests.request("POST", url, headers=headers, data=payload)
     json_response = response.json()
 
-    # Create folder if not exists
-    if not exists(topic_folder_name):
-        makedirs(topic_folder_name)
+    return json_response
 
-    document_data = {}
 
-    for result in json_response['organic']:
-        title = result.get('title', '').replace("/", " - ")
-        link = result.get('link', '')
-        markdown = crawl_website(link) if link else ''
-        filename = title + ".md"
+def google_scholar_search(search_query: str, topic_folder_name: str, time_span: str = None, num_pages: int = 1) -> dict:
+    """Uses the Serper API to retrieve google scholar results based on a string query.
+    Certain search results could be faulty or irrelevant, please ignore these results.
 
-        document_data[title] = {
-            'topic': search_query,
-            'link': link,
-            'snippet': result.get('snippet', ''),
-            'date': result.get('date', ''),
-            'position': result.get('position', 0),
-            'markdown': markdown,
-            'filename': filename
+    Args:
+        search_query (str): The google query string. It needs to be suited for the given research topic.
+        topic_folder_name (str): Name of the topic folder
+        time_span (str, optional): Time span for the search. Defaults to None.
+        num_pages (int, optional): Number of pages to retrieve. Defaults to 1.
+
+    Returns:
+        dict: List of papers from all requested pages
+    """
+
+    url = "https://google.serper.dev/scholar"
+    page = 1
+    papers = []
+
+    for _ in range(num_pages):
+        payload = json.dumps({
+            "q": search_query,
+            "page": page
+        })
+        headers = {
+            'X-API-KEY': '27d67b7a71cfb66589271b1deffb5088822ff518',
+            'Content-Type': 'application/json'
         }
 
-        with open(join(topic_folder_name, filename), "w") as f:
-            f.write(markdown)
+        response = requests.request("POST", url, headers=headers, data=payload)
+        json_response = json.loads(response.text)
+        organic = json_response['organic']
+        papers.extend(organic)
+        page += 1
 
-    return document_data
+    return papers
+
+
 
 def perplexity_search(search_query: str) -> dict:
     """Uses the Serper API to retrieve google results based on a string query.
@@ -167,10 +222,6 @@ def search_papers_with_code(query :str, items_per_page :int = 200) -> dict:
     except ValueError as e:
         print(f"Failed to parse JSON: {e}")
         return None
-
-
-
-
 
 class Response(BaseModel):
     additional_notes: str = Field(description="Additional notes or observations.")
