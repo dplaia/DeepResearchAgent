@@ -1,22 +1,26 @@
-import os
+from pydantic import BaseSettings, Field
 from typing import Final
 
-class Config:
+class Config(BaseSettings):
     """Global configuration settings"""
-    MAX_RETRIES: Final[int] = 3
-    REQUEST_TIMEOUT: Final[int] = 10
-    CRAWL_CONCURRENCY: Final[int] = 5
-    PAPERS_PER_PAGE: Final[int] = 200
+    MAX_RETRIES: int = Field(default=3)
+    REQUEST_TIMEOUT: int = Field(default=10)
+    CRAWL_CONCURRENCY: int = Field(default=5)
+    PAPERS_PER_PAGE: int = Field(default=200)
     
     # API endpoints
-    PERPLEXITY_BASE_URL: Final[str] = "https://api.perplexity.ai"
-    SERPER_BASE_URL: Final[str] = "https://google.serper.dev/search"
+    PERPLEXITY_BASE_URL: str = Field(default="https://api.perplexity.ai")
+    SERPER_BASE_URL: str = Field(default="https://google.serper.dev/search")
     
     # API Keys
-    SERPER_API_KEY: Final[str] = os.environ.get("SERPER_API_KEY", "")
-    PAPERS_WITH_CODE_CSRF_TOKEN: Final[str] = "2ix1PR0FtUWIW5ePo08I3vhgHsvJ6fpqj0x1Ijjo4egxiofnUBzkX67bnHwbNd8G"
-    PERPLEXITY_API_KEY: Final[str] = os.environ.get("PERPLEXITY_API_KEY", "")
+    SERPER_API_KEY: str = Field(..., env="SERPER_API_KEY")
+    PAPERS_WITH_CODE_CSRF_TOKEN: str = Field(default="2ix1PR0FtUWIW5ePo08I3vhgHsvJ6fpqj0x1Ijjo4egxiofnUBzkX67bnHwbNd8G")
+    PERPLEXITY_API_KEY: str = Field(..., env="PERPLEXITY_API_KEY")
     
     # Model Settings
-    FLASH1_MODEL: Final[str] = "gemini-1.5-flash"
-    FLASH2_MODEL: Final[str] = "gemini-2.0-flash-exp"
+    FLASH1_MODEL: str = Field(default="gemini-1.5-flash")
+    FLASH2_MODEL: str = Field(default="gemini-2.0-flash-exp")
+    
+    class Config:
+        env_file = ".env"
+        extra = "ignore"

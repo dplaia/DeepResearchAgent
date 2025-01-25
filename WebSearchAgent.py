@@ -17,19 +17,33 @@ from dataclasses import dataclass
 import requests
 import json
 
+from threading import Lock
+
 class ToolRegistry:
     _tools = {}
+    _lock = Lock()
     
     @classmethod
-    def register(cls, name: str):
+    def register(cls, name: str, description: str = None, category: str = "search"):
         def decorator(func):
-            cls._tools[name] = func
+            func.metadata = {
+                "name": name,
+                "description": description or func.__doc__,
+                "category": category
+            }
+            with cls._lock:
+                cls._tools[name] = func
             return func
         return decorator
     
     @classmethod
     def get_tools(cls, tool_names: List[str]):
-        return [cls._tools[name] for name in tool_names if name in cls._tools]
+        tools = []
+        for name in tool_names:
+            if name not in cls._tools:
+                raise ValueError(f"Tool '{name}' not registered")
+            tools.append(cls._tools[name])
+        return tools
 
 class Response(BaseModel):
     additional_notes: str = Field(description="Additional notes or observations.")
@@ -88,8 +102,52 @@ def save_files(topic_folder_name: str, json_response: dict, search_query: str):
             f.write(markdown)
 
 @ToolRegistry.register("google_general")
+from tenacity import retry, stop_after_attempt, wait_exponential
+
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
+import httpx
+
+async def google_general_search_async(search_query: str, time_span: Optional[str] = None) -> Optional[dict]:
+    """Async version of google_general_search"""
+    if not search_query.strip():
+        raise ValueError("Search query cannot be empty")
+    if time_span and time_span not in ["qdr:h", "qdr:d", "qdr:w", "qdr:m", "qdr:y"]:
+        raise ValueError("Invalid time span value")
+
+    num_results = 10
+    api_key = os.environ.get("SERPER_API_KEY")
+
+    if not api_key:
+        print("SERPER_API_KEY not found in environment variables.")
+        return
+
+    url = "https://google.serper.dev/search"
+    
+    payload = {
+        "q": search_query,
+        "num": num_results
+    }
+    
+    if time_span:
+        payload["tbs"] = time_span
+        
+    headers = {
+        'X-API-KEY': api_key,
+        'Content-Type': 'application/json'
+    }
+
+    async with httpx.AsyncClient() as client:
+        response = await client.post(url, headers=headers, json=payload)
+        response.raise_for_status()
+        return response.json()
+
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
 def google_general_search(search_query: str, time_span: Optional[str] = None) -> Optional[dict]:
     """Uses the Serper API to retrieve google results based on a string query.
+    
+    Raises:
+        ValueError: If search query is empty or time_span is invalid
+        HTTPError: If the API request fails
     Certain search results could be faulty or irrelevant, please ignore these results.
 
     Args:
@@ -112,6 +170,11 @@ def google_general_search(search_query: str, time_span: Optional[str] = None) ->
             - 'markdown': The markdown text (webpage content)
             - 'filename': filename (saved in folder with name=topic_folder_name)
     """
+    if not search_query.strip():
+        raise ValueError("Search query cannot be empty")
+    if time_span and time_span not in ["qdr:h", "qdr:d", "qdr:w", "qdr:m", "qdr:y"]:
+        raise ValueError("Invalid time span value")
+        
     num_results = 10
     api_key = os.environ.get("SERPER_API_KEY")
 
@@ -137,6 +200,7 @@ def google_general_search(search_query: str, time_span: Optional[str] = None) ->
     }
 
     response = requests.request("POST", url, headers=headers, data=payload)
+    response.raise_for_status()  # Will raise HTTPError for 4xx/5xx responses
     json_response = response.json()
 
     return json_response
