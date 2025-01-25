@@ -21,9 +21,11 @@ import httpx
 class Response(BaseModel):
     additional_notes: str = Field(description="Additional notes or observations.")
      
-model = GeminiModel(Config.FLASH2_MODEL)
+config = Config()  # Create an instance of Config
+model = GeminiModel(config.FLASH2_MODEL)
 
-system_prompt = """abc"""
+system_prompt = "abc"
+
 agent = Agent(
     model,
     result_type=Response,
@@ -90,23 +92,21 @@ async def google_general_search(search_query: str, time_span: Optional[str] = No
         payload["tbs"] = time_span
         
     headers = {
-        'X-API-KEY': Config.SERPER_API_KEY,
+        'X-API-KEY': config.SERPER_API_KEY,
         'Content-Type': 'application/json'
     }
 
     async with httpx.AsyncClient() as client:
-        response = await client.post(Config.SERPER_BASE_URL, headers=headers, json=payload)
+        response = await client.post(config.SERPER_BASE_URL, headers=headers, json=payload)
         response.raise_for_status()
         return response.json()
 
-def google_scholar_search(search_query: str, topic_folder_name: str, time_span: str = None, num_pages: int = 1) -> dict:
+def google_scholar_search(search_query: str, num_pages: int = 1) -> dict:
     """Uses the Serper API to retrieve google scholar results based on a string query.
     Certain search results could be faulty or irrelevant, please ignore these results.
 
     Args:
         search_query (str): The google query string. It needs to be suited for the given research topic.
-        topic_folder_name (str): Name of the topic folder
-        time_span (str, optional): Time span for the search. Defaults to None.
         num_pages (int, optional): Number of pages to retrieve. Defaults to 1.
 
     Returns:
@@ -119,15 +119,14 @@ def google_scholar_search(search_query: str, topic_folder_name: str, time_span: 
     for _ in range(num_pages):
         payload = json.dumps({
             "q": search_query,
-            "page": page,
-            "tbs": time_span
-        }) if time_span else json.dumps({"q": search_query, "page": page})
+            "page": page
+        })
         headers = {
-            'X-API-KEY': Config.SERPER_API_KEY,
+            'X-API-KEY': config.SERPER_API_KEY,
             'Content-Type': 'application/json'
         }
 
-        response = requests.request("POST", Config.SERPER_SCHOLAR_BASE_URL, headers=headers, data=payload)
+        response = requests.request("POST", config.SERPER_SCHOLAR_BASE_URL, headers=headers, data=payload)
         if response.status_code != 200:
             print(f"Scholar search failed with status {response.status_code}")
             return []
@@ -139,7 +138,7 @@ def google_scholar_search(search_query: str, topic_folder_name: str, time_span: 
     return papers
 
 class PerplexityResult(TypedDict):
-    test_response: str
+    text_response: str
     citations: list[str]
 
 def perplexity_search(search_query: str) -> PerplexityResult | None:
@@ -155,6 +154,7 @@ def perplexity_search(search_query: str) -> PerplexityResult | None:
             - 'citations' (list[str]): List of citation URLs
             Returns None if the search fails.
     """
+
     messages = [
         {
             "role": "system",
@@ -168,8 +168,8 @@ def perplexity_search(search_query: str) -> PerplexityResult | None:
 
     try:
         client = OpenAI(
-            api_key=Config.PERPLEXITY_API_KEY, 
-            base_url=Config.PERPLEXITY_BASE_URL
+            api_key=config.PERPLEXITY_API_KEY, 
+            base_url=config.PERPLEXITY_BASE_URL
         )
 
         response = client.chat.completions.create(
@@ -178,11 +178,7 @@ def perplexity_search(search_query: str) -> PerplexityResult | None:
         )
 
         message = response.choices[0].message.content + "\n\n"
-        citations = [citation['url'] for citation in response.citations] if hasattr(response, 'citations') else []
-
-        # Format citations in the message
-        for i, url in enumerate(citations, 1):
-            message += f"[{i}] {url}\n"
+        citations = response.citations
 
         return {
             'test_response': message.strip(),
@@ -215,14 +211,13 @@ def papers_with_code_search(query: str, items_per_page: int = 200) -> dict | Non
     """
     
     params = {
-        "page": 1,
         "items_per_page": items_per_page,
         "q": query  # Space will be auto-encoded to "%20"
     }
 
     headers = {
         "accept": "application/json",
-        "X-CSRFToken": Config.PAPERS_WITH_CODE_CSRF_TOKEN
+        "X-CSRFToken": config.PAPERS_WITH_CODE_CSRF_TOKEN
     }
 
     try:
@@ -235,6 +230,9 @@ def papers_with_code_search(query: str, items_per_page: int = 200) -> dict | Non
         
         # Parse JSON response
         data = response.json()
+        # Sort in descending order (most stars first)
+        sorted_list = sorted(data['results'], key=lambda x: x['repository']['stars'], reverse=True)
+        data['results'] = sorted_list
         return data
 
     except requests.exceptions.RequestException as e:
