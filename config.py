@@ -14,7 +14,7 @@ class Config:
     
     # API Keys
     SERPER_API_KEY: Final[str] = os.environ.get("SERPER_API_KEY", "")
-    SERPER_SCHOLAR_API_KEY: Final[str] = os.environ.get("SERPER_SCHOLAR_API_KEY", "")
+    PAPERS_WITH_CODE_CSRF_TOKEN: Final[str] = "2ix1PR0FtUWIW5ePo08I3vhgHsvJ6fpqj0x1Ijjo4egxiofnUBzkX67bnHwbNd8G"
     
     # Model Settings
     FLASH1_MODEL: Final[str] = "gemini-1.5-flash"

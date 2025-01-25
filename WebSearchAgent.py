@@ -138,7 +138,7 @@ def google_scholar_search(search_query: str, topic_folder_name: str, time_span: 
             "tbs": time_span
         }) if time_span else json.dumps({"q": search_query, "page": page})
         headers = {
-            'X-API-KEY': Config.SERPER_SCHOLAR_API_KEY,
+            'X-API-KEY': Config.SERPER_API_KEY,
             'Content-Type': 'application/json'
         }
 
@@ -152,8 +152,6 @@ def google_scholar_search(search_query: str, topic_folder_name: str, time_span: 
         page += 1
 
     return papers
-
-
 
 class PerplexityResult(TypedDict):
     test_response: str
@@ -209,7 +207,7 @@ def search_papers_with_code(query: str, items_per_page: int = 200) -> dict | Non
 
     headers = {
         "accept": "application/json",
-        "X-CSRFToken": "2ix1PR0FtUWIW5ePo08I3vhgHsvJ6fpqj0x1Ijjo4egxiofnUBzkX67bnHwbNd8G"
+        "X-CSRFToken": Config.PAPERS_WITH_CODE_CSRF_TOKEN
     }
 
     try:
