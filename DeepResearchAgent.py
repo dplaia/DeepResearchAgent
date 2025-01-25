@@ -63,10 +63,6 @@ def get_perplexity_search_results(query: str) -> Tuple[str, List[str]]:
         ValueError: If API key is missing
         ConnectionError: If API request fails
     """
-    api_key = os.environ.get("PERPLEXITY_API_KEY")
-    if not api_key:
-        raise ValueError("PERPLEXITY_API_KEY environment variable missing")
-
     messages = [
         {
             "role": "system",
@@ -84,7 +80,7 @@ def get_perplexity_search_results(query: str) -> Tuple[str, List[str]]:
     try:
         # Create an OpenAI client using the provided API key and base URL
         client = OpenAI(
-            api_key=api_key, 
+            api_key=Config.PERPLEXITY_API_KEY, 
             base_url=Config.PERPLEXITY_BASE_URL
         )
 

@@ -11,6 +11,7 @@ class Config(BaseSettings):
     # API endpoints
     PERPLEXITY_BASE_URL: str = Field(default="https://api.perplexity.ai")
     SERPER_BASE_URL: str = Field(default="https://google.serper.dev/search")
+    SERPER_SCHOLAR_BASE_URL: str = Field(default="https://google.serper.dev/scholar")
     
     # API Keys
     SERPER_API_KEY: str = Field(..., env="SERPER_API_KEY")

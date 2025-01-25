@@ -16,7 +16,8 @@ from pydantic_ai.models.gemini import GeminiModel
 from dataclasses import dataclass
 import requests
 import json
-
+from tenacity import retry, stop_after_attempt, wait_exponential
+import httpx
 from threading import Lock
 
 class ToolRegistry:
@@ -101,9 +102,6 @@ def save_files(topic_folder_name: str, json_response: dict, search_query: str):
         with open(join(topic_folder_name, filename), "w") as f:
             f.write(markdown)
 
-from tenacity import retry, stop_after_attempt, wait_exponential
-import httpx
-
 @ToolRegistry.register("google_general")
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
 async def google_general_search_async(search_query: str, time_span: Optional[str] = None) -> Optional[dict]:
@@ -114,14 +112,7 @@ async def google_general_search_async(search_query: str, time_span: Optional[str
         raise ValueError("Invalid time span value")
 
     num_results = 10
-    api_key = os.environ.get("SERPER_API_KEY")
 
-    if not api_key:
-        print("SERPER_API_KEY not found in environment variables.")
-        return
-
-    url = "https://google.serper.dev/search"
-    
     payload = {
         "q": search_query,
         "num": num_results
@@ -131,12 +122,12 @@ async def google_general_search_async(search_query: str, time_span: Optional[str
         payload["tbs"] = time_span
         
     headers = {
-        'X-API-KEY': api_key,
+        'X-API-KEY': Config.SERPER_API_KEY,
         'Content-Type': 'application/json'
     }
 
     async with httpx.AsyncClient() as client:
-        response = await client.post(url, headers=headers, json=payload)
+        response = await client.post(Config.SERPER_BASE_URL, headers=headers, json=payload)
         response.raise_for_status()
         return response.json()
 
@@ -175,14 +166,7 @@ def google_general_search(search_query: str, time_span: Optional[str] = None) ->
         raise ValueError("Invalid time span value")
         
     num_results = 10
-    api_key = os.environ.get("SERPER_API_KEY")
 
-    if not api_key:
-        print("SERPER_API_KEY not found in environment variables.")
-        return
-
-    url = "https://google.serper.dev/search"
-    
     payload = {
         "q": search_query,
         "num": num_results
@@ -194,11 +178,11 @@ def google_general_search(search_query: str, time_span: Optional[str] = None) ->
     payload = json.dumps(payload)
 
     headers = {
-    'X-API-KEY': api_key,
+    'X-API-KEY': Config.SERPER_API_KEY,
     'Content-Type': 'application/json'
     }
 
-    response = requests.request("POST", url, headers=headers, data=payload)
+    response = requests.request("POST", Config.SERPER_BASE_URL, headers=headers, data=payload)
     response.raise_for_status()  # Will raise HTTPError for 4xx/5xx responses
     json_response = response.json()
 
@@ -219,7 +203,6 @@ def google_scholar_search(search_query: str, topic_folder_name: str, time_span: 
         dict: List of papers from all requested pages
     """
 
-    url = "https://google.serper.dev/scholar"
     page = 1
     papers = []
 
@@ -234,7 +217,7 @@ def google_scholar_search(search_query: str, topic_folder_name: str, time_span: 
             'Content-Type': 'application/json'
         }
 
-        response = requests.request("POST", url, headers=headers, data=payload)
+        response = requests.request("POST", Config.SERPER_SCHOLAR_BASE_URL, headers=headers, data=payload)
         if response.status_code != 200:
             print(f"Scholar search failed with status {response.status_code}")
             return []
@@ -353,7 +336,7 @@ def papers_with_code_search(query: str, items_per_page: int = 200) -> dict | Non
         print(f"Failed to parse JSON: {e}")
         return None
 
-def initialize_agent(selected_tools: List[str] = None):
+def SERPER_SCHOLAR_BASE_URLinitialize_agent(selected_tools: List[str] = None):
     global agent
     if selected_tools is None:
         selected_tools = list(ToolRegistry._tools.keys())
