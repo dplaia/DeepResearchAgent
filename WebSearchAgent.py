@@ -17,6 +17,20 @@ from dataclasses import dataclass
 import requests
 import json
 
+class Response(BaseModel):
+    additional_notes: str = Field(description="Additional notes or observations.")
+     
+flash1_model = "gemini-1.5-flash"
+flash2_model = "gemini-2.0-flash-exp"
+model = GeminiModel(flash2_model)
+
+system_prompt = """abc"""
+agent = Agent(
+    model,
+    result_type=Response,
+    system_prompt=system_prompt
+    )
+
 async def crawl_website_async(url_webpage):
     if is_pdf_url(url_webpage):
         md = MarkItDown()
@@ -59,6 +73,7 @@ def save_files(topic_folder_name: str, json_response: dict, search_query: str):
         with open(join(topic_folder_name, filename), "w") as f:
             f.write(markdown)
 
+@agent.tool_plain
 def google_general_search(search_query: str, time_span: Optional[str] = None) -> Optional[dict]:
     """Uses the Serper API to retrieve google results based on a string query.
     Certain search results could be faulty or irrelevant, please ignore these results.
@@ -112,7 +127,7 @@ def google_general_search(search_query: str, time_span: Optional[str] = None) ->
 
     return json_response
 
-
+@agent.tool_plain
 def google_scholar_search(search_query: str, topic_folder_name: str, time_span: str = None, num_pages: int = 1) -> dict:
     """Uses the Serper API to retrieve google scholar results based on a string query.
     Certain search results could be faulty or irrelevant, please ignore these results.
@@ -157,6 +172,60 @@ class PerplexityResult(TypedDict):
     test_response: str
     citations: list[str]
 
+def get_perplexity_search_results(query: str) -> Tuple[str, List[str]]:
+    """
+    Searches Perplexity API with error handling
+    
+    Args:
+        query: Search query string
+        
+    Returns:
+        Tuple of (message text, citation list)
+        
+    Raises:
+        ValueError: If API key is missing
+        ConnectionError: If API request fails
+    """
+
+    messages = [
+        {
+            "role": "system",
+            "content": (
+                "You are an artificial intelligence assistant and you need to "
+                "engage in a helpful, detailed, polite conversation with a user."
+            ),
+        },
+        {   
+            "role": "user",
+            "content": query,
+        },
+    ]
+
+    try:
+        # Create an OpenAI client using the provided API key and base URL
+        client = OpenAI(
+            api_key=Config.PERPLEXITY_API_KEY, 
+            base_url=Config.PERPLEXITY_BASE_URL
+        )
+
+        response = client.chat.completions.create(
+            model="sonar-pro",
+            messages=messages,
+        )
+
+        message = response.choices[0].message.content + "\n\n"
+        citations = response.citations
+
+        for k, citation in enumerate(citations):
+            message += f"[{k+1}] {citation}\n"
+
+        return message, citations
+
+    except Exception as e:
+        raise ConnectionError(f"Perplexity API request failed: {str(e)}")
+
+
+@agent.tool_plain
 def perplexity_search(search_query: str) -> PerplexityResult | None:
     """Uses the Serper API to retrieve google results based on a string query.
     Certain search results could be faulty or irrelevant, please ignore these results.
@@ -178,6 +247,7 @@ def perplexity_search(search_query: str) -> PerplexityResult | None:
         print(f"Perplexity search failed: {e}")
         return None
 
+@agent.tool_plain
 def search_papers_with_code(query: str, items_per_page: int = 200) -> dict | None:
     """
     Search papers with the given query and return the results as a dictionary.
@@ -229,19 +299,7 @@ def search_papers_with_code(query: str, items_per_page: int = 200) -> dict | Non
         print(f"Failed to parse JSON: {e}")
         return None
 
-class Response(BaseModel):
-    additional_notes: str = Field(description="Additional notes or observations.")
-     
-flash1_model = "gemini-1.5-flash"
-flash2_model = "gemini-2.0-flash-exp"
-model = GeminiModel(flash2_model)
 
-system_prompt = """abc"""
-agent = Agent(
-    model,
-    result_type=Response,
-    system_prompt=system_prompt
-    )
 
 async def run_agent():
     with capture_run_messages() as messages:  
@@ -261,9 +319,5 @@ async def run_agent():
     return result
 
 if __name__ == "__main__":
-    # result = asyncio.run(run_agent())
-    # print(result)
-
-    data = search_papers_with_code("test-time compute")
-    print("API Response:")
-    print(data)
+    result = asyncio.run(run_agent())
+    print(result)
