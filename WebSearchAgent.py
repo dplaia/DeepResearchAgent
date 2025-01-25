@@ -1,6 +1,6 @@
 import os
-import json
 from rich import print
+from typing import Optional, TypedDict
 from os.path import join, exists
 from os import listdir, makedirs
 from datetime import datetime
@@ -8,6 +8,7 @@ from google import genai
 from google.genai import types
 from openai import OpenAI
 from pydantic import BaseModel, Field
+from config import Config
 import asyncio
 from crawl4ai import *
 from pydantic_ai import Agent, UnexpectedModelBehavior, capture_run_messages
@@ -32,7 +33,7 @@ async def crawl_website_async(url_webpage):
 def crawl_website(url_webpage):
     return asyncio.run(crawl_website_async(url_webpage))
     
-def save_files(topic_folder_name: str):
+def save_files(topic_folder_name: str, json_response: dict, search_query: str):
     # Create folder if not exists
     if not exists(topic_folder_name):
         makedirs(topic_folder_name)
@@ -58,7 +59,7 @@ def save_files(topic_folder_name: str):
         with open(join(topic_folder_name, filename), "w") as f:
             f.write(markdown)
 
-def google_general_search(search_query: str, time_span: str = None) -> dict:
+def google_general_search(search_query: str, time_span: Optional[str] = None) -> Optional[dict]:
     """Uses the Serper API to retrieve google results based on a string query.
     Certain search results could be faulty or irrelevant, please ignore these results.
 
@@ -133,14 +134,18 @@ def google_scholar_search(search_query: str, topic_folder_name: str, time_span: 
     for _ in range(num_pages):
         payload = json.dumps({
             "q": search_query,
-            "page": page
-        })
+            "page": page,
+            "tbs": time_span
+        }) if time_span else json.dumps({"q": search_query, "page": page})
         headers = {
-            'X-API-KEY': '27d67b7a71cfb66589271b1deffb5088822ff518',
+            'X-API-KEY': Config.SERPER_SCHOLAR_API_KEY,
             'Content-Type': 'application/json'
         }
 
         response = requests.request("POST", url, headers=headers, data=payload)
+        if response.status_code != 200:
+            print(f"Scholar search failed with status {response.status_code}")
+            return []
         json_response = json.loads(response.text)
         organic = json_response['organic']
         papers.extend(organic)
@@ -150,7 +155,11 @@ def google_scholar_search(search_query: str, topic_folder_name: str, time_span: 
 
 
 
-def perplexity_search(search_query: str) -> dict:
+class PerplexityResult(TypedDict):
+    test_response: str
+    citations: list[str]
+
+def perplexity_search(search_query: str) -> PerplexityResult | None:
     """Uses the Serper API to retrieve google results based on a string query.
     Certain search results could be faulty or irrelevant, please ignore these results.
 
@@ -164,15 +173,14 @@ def perplexity_search(search_query: str) -> dict:
 
     """
 
-    test_response, citations = get_perplexity_search_results(search_query)
+    try:
+        test_response, citations = get_perplexity_search_results(search_query)
+        return {'test_response': test_response, 'citations': citations}
+    except Exception as e:
+        print(f"Perplexity search failed: {e}")
+        return None
 
-    search_result = {
-        'test_response': test_response,
-        'citations': citations
-    }
-    return search_result
-
-def search_papers_with_code(query :str, items_per_page :int = 200) -> dict:
+def search_papers_with_code(query: str, items_per_page: int = 200) -> dict | None:
     """
     Search papers with the given query and return the results as a dictionary.
 
