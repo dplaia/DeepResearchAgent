@@ -1,3 +1,4 @@
+import os
 from typing import Final
 
 class Config:
@@ -10,6 +11,10 @@ class Config:
     # API endpoints
     PERPLEXITY_BASE_URL: Final[str] = "https://api.perplexity.ai"
     SERPER_BASE_URL: Final[str] = "https://google.serper.dev/search"
+    
+    # API Keys
+    SERPER_API_KEY: Final[str] = os.environ.get("SERPER_API_KEY", "")
+    SERPER_SCHOLAR_API_KEY: Final[str] = os.environ.get("SERPER_SCHOLAR_API_KEY", "")
     
     # Model Settings
     FLASH1_MODEL: Final[str] = "gemini-1.5-flash"
