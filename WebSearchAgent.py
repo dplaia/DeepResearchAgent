@@ -225,7 +225,7 @@ def perplexity_search(search_query: str) -> PerplexityResult | None:
         return None
 
 @agent.tool_plain
-def search_papers_with_code(query: str, items_per_page: int = 200) -> dict | None:
+def papers_with_code_search(query: str, items_per_page: int = 200) -> dict | None:
     """
     Search papers with the given query and return the results as a dictionary.
 
@@ -275,8 +275,6 @@ def search_papers_with_code(query: str, items_per_page: int = 200) -> dict | Non
     except ValueError as e:
         print(f"Failed to parse JSON: {e}")
         return None
-
-
 
 async def run_agent():
     with capture_run_messages() as messages:  
