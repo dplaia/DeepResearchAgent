@@ -336,7 +336,7 @@ def papers_with_code_search(query: str, items_per_page: int = 200) -> dict | Non
         print(f"Failed to parse JSON: {e}")
         return None
 
-def SERPER_SCHOLAR_BASE_URLinitialize_agent(selected_tools: List[str] = None):
+def initialize_agent(selected_tools: List[str] = None):
     global agent
     if selected_tools is None:
         selected_tools = list(ToolRegistry._tools.keys())
