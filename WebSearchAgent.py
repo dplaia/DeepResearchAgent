@@ -6,7 +6,7 @@ from os import listdir, makedirs
 from datetime import datetime
 from google import genai
 from google.genai import types
-from openai import OpenAI
+from openai import AsyncOpenAI
 from pydantic import BaseModel, Field
 from config import Config
 import asyncio
@@ -101,39 +101,33 @@ async def google_general_search(search_query: str, time_span: Optional[str] = No
         response.raise_for_status()
         return response.json()
 
-def google_scholar_search(search_query: str, num_pages: int = 1) -> dict:
-    """Uses the Serper API to retrieve google scholar results based on a string query.
-    Certain search results could be faulty or irrelevant, please ignore these results.
-
-    Args:
-        search_query (str): The google query string. It needs to be suited for the given research topic.
-        num_pages (int, optional): Number of pages to retrieve. Defaults to 1.
-
-    Returns:
-        dict: List of papers from all requested pages
-    """
-
+async def google_scholar_search(search_query: str, num_pages: int = 1) -> dict:
+    """Async version of google scholar search"""
     page = 1
     papers = []
 
-    for _ in range(num_pages):
-        payload = json.dumps({
-            "q": search_query,
-            "page": page
-        })
-        headers = {
-            'X-API-KEY': config.SERPER_API_KEY,
-            'Content-Type': 'application/json'
-        }
+    async with httpx.AsyncClient() as client:
+        for _ in range(num_pages):
+            payload = json.dumps({
+                "q": search_query,
+                "page": page
+            })
+            headers = {
+                'X-API-KEY': config.SERPER_API_KEY,
+                'Content-Type': 'application/json'
+            }
 
-        response = requests.request("POST", config.SERPER_SCHOLAR_BASE_URL, headers=headers, data=payload)
-        if response.status_code != 200:
-            print(f"Scholar search failed with status {response.status_code}")
-            return []
-        json_response = json.loads(response.text)
-        organic = json_response['organic']
-        papers.extend(organic)
-        page += 1
+            response = await client.post(
+                config.SERPER_SCHOLAR_BASE_URL,
+                headers=headers,
+                data=payload
+            )
+            if response.status_code != 200:
+                print(f"Scholar search failed with status {response.status_code}")
+                return []
+            json_response = response.json()
+            papers.extend(json_response['organic'])
+            page += 1
 
     return papers
 
@@ -141,105 +135,50 @@ class PerplexityResult(TypedDict):
     text_response: str
     citations: list[str]
 
-def perplexity_search(search_query: str) -> PerplexityResult | None:
-    """Uses the Perplexity API to perform a search and generate a response with citations.
-
-    Args:
-        search_query (str): The query string for Perplexity. It should be crafted to
-            effectively utilize Perplexity's LLM processing of web content.
-
-    Returns:
-        PerplexityResult | None: A dictionary containing:
-            - 'test_response' (str): The text response from Perplexity, including citations
-            - 'citations' (list[str]): List of citation URLs
-            Returns None if the search fails.
-    """
-
-    messages = [
-        {
-            "role": "system",
-            "content": "You are an artificial intelligence assistant that engages in helpful, detailed conversations.",
-        },
-        {   
-            "role": "user",
-            "content": search_query,
-        },
-    ]
-
+async def perplexity_search(search_query: str) -> PerplexityResult | None:
+    """Async version using AsyncOpenAI"""
     try:
-        client = OpenAI(
-            api_key=config.PERPLEXITY_API_KEY, 
+        client = AsyncOpenAI(
+            api_key=config.PERPLEXITY_API_KEY,
             base_url=config.PERPLEXITY_BASE_URL
         )
 
-        response = client.chat.completions.create(
+        response = await client.chat.completions.create(
             model="sonar-pro",
-            messages=messages,
+            messages=[{
+                "role": "system",
+                "content": "You are an artificial intelligence assistant that engages in helpful, detailed conversations.",
+            }, {   
+                "role": "user",
+                "content": search_query,
+            }],
         )
 
         message = response.choices[0].message.content + "\n\n"
-        citations = response.citations
-
         return {
-            'test_response': message.strip(),
-            'citations': citations
+            'text_response': message.strip(),
+            'citations': response.citations
         }
-
     except Exception as e:
         print(f"Perplexity search failed: {e}")
         return None
 
-def papers_with_code_search(query: str, items_per_page: int = 200) -> dict | None:
-    """
-    Search papers with the given query and return the results as a dictionary.
-
-    Args:
-        query (str): The query string to search for.
-        items_per_page (int): The number of items to return per page (default is 200).
-
-    Returns:
-        dict: A dictionary with the following keys:
-            - 'count': The total number of results found.
-            - 'results': A list of dictionaries, each representing a search result.
-                - 'paper': The paper title.
-                - 'repository': The repository URL.
-                - 'is_official': Whether the paper is official.
-            - 'paper': A dictionary with the following keys
-                 - ['id', 'arxiv_id', 'nips_id', 'url_abs', 'url_pdf', 'title', 'abstract', 
-                 'authors', 'published', 'conference', 'conference_url_abs', 
-                 'conference_url_pdf', 'proceeding'])
-    """
-    
-    params = {
-        "items_per_page": items_per_page,
-        "q": query  # Space will be auto-encoded to "%20"
-    }
-
-    headers = {
-        "accept": "application/json",
-        "X-CSRFToken": config.PAPERS_WITH_CODE_CSRF_TOKEN
-    }
-
+async def papers_with_code_search(query: str, items_per_page: int = 200) -> dict | None:
+    """Async version of papers with code search"""
     try:
-        # Send GET request
-        response = requests.get("https://paperswithcode.com/api/v1/search/", 
-                                params=params, 
-                                headers=headers)
-
-        response.raise_for_status()  # Raise exception for HTTP errors (e.g., 4xx/5xx)
-        
-        # Parse JSON response
-        data = response.json()
-        # Sort in descending order (most stars first)
-        sorted_list = sorted(data['results'], key=lambda x: x['repository']['stars'], reverse=True)
-        data['results'] = sorted_list
-        return data
-
-    except requests.exceptions.RequestException as e:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                "https://paperswithcode.com/api/v1/search/",
+                params={"items_per_page": items_per_page, "q": query},
+                headers={"accept": "application/json", "X-CSRFToken": config.PAPERS_WITH_CODE_CSRF_TOKEN}
+            )
+            response.raise_for_status()
+            data = response.json()
+            sorted_list = sorted(data['results'], key=lambda x: x['repository']['stars'], reverse=True)
+            data['results'] = sorted_list
+            return data
+    except Exception as e:
         print(f"Request failed: {e}")
-        return None
-    except ValueError as e:
-        print(f"Failed to parse JSON: {e}")
         return None
 
 def initialize_agent(selected_tools: List[str] = None):
