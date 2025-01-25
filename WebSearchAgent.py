@@ -1,6 +1,6 @@
 import os
 from rich import print
-from typing import Optional, TypedDict
+from typing import Optional, TypedDict, List
 from os.path import join, exists
 from os import listdir, makedirs
 from datetime import datetime
@@ -16,6 +16,20 @@ from pydantic_ai.models.gemini import GeminiModel
 from dataclasses import dataclass
 import requests
 import json
+
+class ToolRegistry:
+    _tools = {}
+    
+    @classmethod
+    def register(cls, name: str):
+        def decorator(func):
+            cls._tools[name] = func
+            return func
+        return decorator
+    
+    @classmethod
+    def get_tools(cls, tool_names: List[str]):
+        return [cls._tools[name] for name in tool_names if name in cls._tools]
 
 class Response(BaseModel):
     additional_notes: str = Field(description="Additional notes or observations.")
@@ -73,7 +87,7 @@ def save_files(topic_folder_name: str, json_response: dict, search_query: str):
         with open(join(topic_folder_name, filename), "w") as f:
             f.write(markdown)
 
-@agent.tool_plain
+@ToolRegistry.register("google_general")
 def google_general_search(search_query: str, time_span: Optional[str] = None) -> Optional[dict]:
     """Uses the Serper API to retrieve google results based on a string query.
     Certain search results could be faulty or irrelevant, please ignore these results.
@@ -127,7 +141,7 @@ def google_general_search(search_query: str, time_span: Optional[str] = None) ->
 
     return json_response
 
-@agent.tool_plain
+@ToolRegistry.register("scholar")
 def google_scholar_search(search_query: str, topic_folder_name: str, time_span: str = None, num_pages: int = 1) -> dict:
     """Uses the Serper API to retrieve google scholar results based on a string query.
     Certain search results could be faulty or irrelevant, please ignore these results.
@@ -172,7 +186,7 @@ class PerplexityResult(TypedDict):
     test_response: str
     citations: list[str]
 
-@agent.tool_plain
+@ToolRegistry.register("perplexity")
 def perplexity_search(search_query: str) -> PerplexityResult | None:
     """Uses the Perplexity API to perform a search and generate a response with citations.
 
@@ -224,7 +238,7 @@ def perplexity_search(search_query: str) -> PerplexityResult | None:
         print(f"Perplexity search failed: {e}")
         return None
 
-@agent.tool_plain
+@ToolRegistry.register("papers_with_code")
 def papers_with_code_search(query: str, items_per_page: int = 200) -> dict | None:
     """
     Search papers with the given query and return the results as a dictionary.
@@ -276,7 +290,24 @@ def papers_with_code_search(query: str, items_per_page: int = 200) -> dict | Non
         print(f"Failed to parse JSON: {e}")
         return None
 
-async def run_agent():
+def initialize_agent(selected_tools: List[str] = None):
+    global agent
+    if selected_tools is None:
+        selected_tools = list(ToolRegistry._tools.keys())
+        
+    # Create base agent first
+    agent = Agent(
+        model,
+        result_type=Response,
+        system_prompt=system_prompt
+    )
+    
+    # Register selected tools
+    for tool_func in ToolRegistry.get_tools(selected_tools):
+        agent.tool_plain(tool_func)
+
+async def run_agent(selected_tools: List[str] = None):
+    initialize_agent(selected_tools)  # Initialize with selected tools
     with capture_run_messages() as messages:  
         try:
             result = await agent.run('abc')
@@ -294,5 +325,7 @@ async def run_agent():
     return result
 
 if __name__ == "__main__":
-    result = asyncio.run(run_agent())
+    # Example: Select specific tools to enable
+    selected_tools = ["google_general", "perplexity"]
+    result = asyncio.run(run_agent(selected_tools))
     print(result)
