@@ -32,7 +32,18 @@ agent = Agent(
     system_prompt=system_prompt
     )
 
-async def crawl_website_async(url_webpage):
+async def crawl_website_async(url_webpage: str):
+
+    """
+    Crawl a website using the crawl4ai library.
+    
+    Args:
+        url_webpage (str): The URL of the webpage to crawl.
+    
+    Returns:
+        str: The crawled content in markdown format.
+    """
+    
     if is_pdf_url(url_webpage):
         md = MarkItDown()
         result = md.convert(url_webpage)
