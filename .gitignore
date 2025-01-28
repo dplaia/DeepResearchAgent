@@ -173,3 +173,4 @@ uv.lock
 test-time-compute/
 *.md
 .aider*
+result.json
