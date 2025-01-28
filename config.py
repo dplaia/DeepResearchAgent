@@ -17,6 +17,7 @@ class Config(BaseSettings):
     SERPER_API_KEY: str = Field(..., env="SERPER_API_KEY")
     PAPERS_WITH_CODE_CSRF_TOKEN: str = Field(default="2ix1PR0FtUWIW5ePo08I3vhgHsvJ6fpqj0x1Ijjo4egxiofnUBzkX67bnHwbNd8G")
     PERPLEXITY_API_KEY: str = Field(..., env="PERPLEXITY_API_KEY")
+    FIRECRAWL_API_KEY: str = Field(..., env="FIRECRAWL_API_KEY")
     
     # Tool Descriptions
     TOOL_DESCRIPTIONS: Final = {

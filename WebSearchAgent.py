@@ -115,13 +115,13 @@ def initialize_agent(selected_tools: List[str] = None):
     )
 
 
-async def run_agent(selected_tools: List[str] = None):
+async def run_agent(search_query: str, selected_tools: List[str] = None):
     initialize_agent(selected_tools)  # Initialize with selected tools
 
     with capture_run_messages() as messages:  
         try:
-            query = "What are considered good hearing devices?"
-            result = await agent.run(query)
+            
+            result = await agent.run(search_query)
 
             # Create a console instance
             console = Console()
@@ -146,6 +146,6 @@ if __name__ == "__main__":
     # Example: Select specific tools to enable
     selected_tools = ["google_general", "perplexity"]
     #tools_list = [google_general_search, google_scholar_search, papers_with_code_search, crawl_website_async, google_news_search] #perplexity_search,
-
-    result = asyncio.run(run_agent(selected_tools))
+    search_query = "What are considered good hearing devices?"
+    result = asyncio.run(run_agent(search_query, selected_tools))
     print(result)

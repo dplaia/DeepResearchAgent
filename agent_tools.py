@@ -4,7 +4,7 @@ import httpx
 from config import Config
 import json
 from openai import AsyncOpenAI
-
+from firecrawl import FirecrawlApp
 config = Config()
 
 class TimeSpan(StrEnum):
@@ -39,7 +39,7 @@ async def google_general_search(search_query: str, time_span: Optional[TimeSpan]
         if "site:" not in web_domain:
             web_domain = f"site:{web_domain}"
         search_query = f"{web_domain} {search_query}"
-        
+
     if not search_query.strip():
         raise ValueError("Search query cannot be empty")
     if time_span and time_span not in ["qdr:h", "qdr:d", "qdr:w", "qdr:m", "qdr:y"]:
@@ -181,4 +181,24 @@ async def papers_with_code_search(query: str, items_per_page: int = 200) -> dict
             return data
     except Exception as e:
         print(f"Request failed: {e}")
+        return None
+
+async def map_website(url: str, include_subdomains: bool = True) -> dict | None:
+    """Map a website's content using FirecrawlApp.
+    
+    Args:
+        url (str): The URL to map
+        include_subdomains (bool, optional): Whether to include subdomains in the mapping. Defaults to True.
+        
+    Returns:
+        dict | None: The mapping results or None if the operation fails
+    """
+    try:
+        app = FirecrawlApp(api_key=config.FIRECRAWL_API_KEY)
+        result = app.map_url(url, params={
+            'includeSubdomains': include_subdomains
+        })
+        return result
+    except Exception as e:
+        print(f"Website mapping failed: {e}")
         return None
