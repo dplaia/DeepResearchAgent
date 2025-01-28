@@ -17,7 +17,7 @@ class TimeSpan(StrEnum):
     MONTH = "qdr:m"
     YEAR = "qdr:y"
 
-async def google_general_search(search_query: str, time_span: Optional[TimeSpan] = None) -> Optional[dict]:
+async def google_general_search(search_query: str, time_span: Optional[TimeSpan] = None, web_domain: Optional[str] = None) -> Optional[dict]:
     """
     Perform a Google search using the Serper API.
     
@@ -30,11 +30,16 @@ async def google_general_search(search_query: str, time_span: Optional[TimeSpan]
                 - "qdr:w" (for week)
                 - "qdr:m" (for month)
                 - "qdr:y" (for year)
-    
+        web_domain (Optional[str], optional): Search inside a web domain (e.g., web_domain="brainchip.com" -> searches only pages with this domain)
     Returns:
         Optional[dict]: The search results.
     """
-    
+
+    if web_domain & ("site:" not in search_query):
+        if "site:" not in web_domain:
+            web_domain = f"site:{web_domain}"
+        search_query = f"{web_domain} {search_query}"
+        
     if not search_query.strip():
         raise ValueError("Search query cannot be empty")
     if time_span and time_span not in ["qdr:h", "qdr:d", "qdr:w", "qdr:m", "qdr:y"]:
