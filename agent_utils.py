@@ -6,33 +6,6 @@ from config import Config
 
 config = Config()
 
-async def crawl_website_async(url_webpage: str):
-
-    """
-    Crawl a website using the crawl4ai library.
-    
-    Args:
-        url_webpage (str): The URL of the webpage to crawl.
-    
-    Returns:
-        str: The crawled content in markdown format.
-    """
-    
-    if is_pdf_url(url_webpage):
-        md = MarkItDown()
-        result = md.convert(url_webpage)
-        
-        return result.text_content
-        
-    async with AsyncWebCrawler() as crawler:
-        result = await crawler.arun(
-            url=url_webpage,
-        )
-        return result.markdown
-
-def crawl_website(url_webpage):
-    return asyncio.run(crawl_website_async(url_webpage))
-
 
 def is_pdf_url(url: str, timeout: int = config.REQUEST_TIMEOUT) -> bool:
     """
