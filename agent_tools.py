@@ -202,3 +202,45 @@ async def map_website(url: str, include_subdomains: bool = True) -> dict | None:
     except Exception as e:
         print(f"Website mapping failed: {e}")
         return None
+
+async def scrape_website(url: str) -> dict | None:
+    """Scrape a website's content using FirecrawlApp.
+    
+    Args:
+        url (str): The URL to scrape
+        
+    Returns:
+        dict | None: The scraping results or None if the operation fails
+    """
+    try:
+        app = FirecrawlApp(api_key=config.FIRECRAWL_API_KEY)
+        result = app.scrape_url(url, params={
+            'formats': ['markdown']
+        })
+        return result
+    except Exception as e:
+        print(f"Website scraping failed: {e}")
+        return None
+
+async def crawl_website(url: str, limit: int = 10) -> dict | None:
+    """Crawl a website's content using FirecrawlApp.
+    
+    Args:
+        url (str): The URL to crawl
+        limit (int, optional): Maximum number of pages to crawl. Defaults to 10.
+        
+    Returns:
+        dict | None: The crawling results or None if the operation fails
+    """
+    try:
+        app = FirecrawlApp(api_key=config.FIRECRAWL_API_KEY)
+        result = app.crawl_url(url, params={
+            'limit': limit,
+            'scrapeOptions': {
+                'formats': ['markdown']
+            }
+        })
+        return result
+    except Exception as e:
+        print(f"Website crawling failed: {e}")
+        return None
