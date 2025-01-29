@@ -1,11 +1,19 @@
+import os
 from enum import StrEnum
 from typing import Optional, TypedDict, List
 import httpx
 from config import Config
+import requests
 import json
-from openai import AsyncOpenAI
+from openai import AsyncOpenAI, BaseModel
 from firecrawl import FirecrawlApp
 from agent_utils import *
+from pydantic import BaseModel, Field
+from google import genai
+from google.genai import types
+from openai import OpenAI
+from openai import AsyncOpenAI
+
 config = Config()
 
 class TimeSpan(StrEnum):
@@ -36,7 +44,7 @@ async def google_general_search(search_query: str, time_span: Optional[TimeSpan]
         Optional[dict]: The search results.
     """
 
-    if web_domain & ("site:" not in search_query):
+    if web_domain and ("site:" not in search_query):
         if "site:" not in web_domain:
             web_domain = f"site:{web_domain}"
         search_query = f"{web_domain} {search_query}"
@@ -158,10 +166,40 @@ async def perplexity_search(search_query: str) -> PerplexityResult | None:
         )
 
         message = response.choices[0].message.content + "\n\n"
-        return {
-            'text_response': message.strip(),
-            'citations': response.citations
-        }
+
+        response = PerplexityResult(
+            text_response = message.strip(),
+            citations=response.citations
+        )
+
+        return response
+    except Exception as e:
+        print(f"Perplexity search failed: {e}")
+        return None
+
+def perplexity_sonar_reasoning(search_query: str) -> PerplexityResult | None:
+
+    try:
+        client = OpenAI(
+        base_url=config.OPENROUTER_BASE_URL,
+        api_key=config.OPENROUTER_API_KEY,
+        )
+
+        completion = client.chat.completions.create(
+        model=config.OPENROUTER_PERPLEXITY_SONAR_REASONING,
+        messages=[
+            {
+            "role": "user",
+            "content": search_query
+            }
+        ])
+
+        response = PerplexityResult(
+                text_response = completion.choices[0].message.content.strip(),
+                citations=completion.citations
+            )
+
+        return response
     except Exception as e:
         print(f"Perplexity search failed: {e}")
         return None
@@ -271,4 +309,104 @@ async def crawl4ai_website_async(url_webpage: str):
         return result.markdown
 
 def crawl_website(url_webpage):
-    return asyncio.run(crawl_website_async(url_webpage))
+    return asyncio.run(crawl4ai_website_async(url_webpage))
+
+class ReasoningModelResponse(BaseModel):
+    reasoning_content: str = Field(description="The reasoning/thinking chain-of-thought output of the model.")
+    final_answer: str = Field(description="The final response/answer of the model (after thinking).")
+
+def deepseekR1_call(user_input: str) -> ReasoningModelResponse:
+    """
+    Call the DeepSeek Reasoner model to process user input.
+
+    This function sends a user query to the DeepSeek Reasoner model and processes
+    the streamed response, separating the reasoning content from the final answer.
+
+    Args:
+        user_input (str): The user's query or input to be processed by the model.
+
+    Returns:
+        DeepseekR1Response: An object containing the reasoning content and final answer.
+
+    Raises:
+        Exception: If there's an error in API communication or response processing.
+    """
+
+    deepseek_client = OpenAI(
+        api_key=config.DEEPSEEK_API_KEY,
+        base_url=config.DEEPSEEK_BASE_URL
+    )
+    model = config.DEEPSEEK_R1
+
+    deepseek_messages = []
+    deepseek_messages.append({
+        "role": "user", 
+        "content": user_input
+        })
+    
+    response = deepseek_client.chat.completions.create(
+                model=model,
+                #max_tokens=1,
+                messages=deepseek_messages,
+                stream=True
+            )
+
+    reasoning_content = ""
+    final_content = ""
+
+    for chunk in response:
+        if chunk.choices[0].delta.reasoning_content:
+            reasoning_piece = chunk.choices[0].delta.reasoning_content
+            reasoning_content += reasoning_piece
+        elif chunk.choices[0].delta.content:
+            final_content += chunk.choices[0].delta.content
+
+    response = ReasoningModelResponse(
+        reasoning_content=reasoning_content, 
+        final_answer=final_content)
+    return response        
+
+def free_deepseekR1_call(user_input: str) -> ReasoningModelResponse:
+
+    url = f"{config.OPENROUTER_BASE_URL}/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {config.OPENROUTER_API_KEY}",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "model": config.OPENROUTER_DEEPSEEK_R1,
+        "messages": [
+            {"role": "user", "content": user_input}
+        ],
+        "include_reasoning": True
+    }
+
+    response = requests.post(url, headers=headers, data=json.dumps(payload))
+
+    thinking_part = response.json()['choices'][0]['message']['reasoning']
+    final_answer = response.json()['choices'][0]['message']['content']
+
+    response = ReasoningModelResponse(
+        reasoning_content=thinking_part, 
+        final_answer=final_answer)
+    return response 
+
+def gemini_flash2_thinking_call(user_input: str) -> ReasoningModelResponse:
+    
+    # Only run this block for Gemini Developer API
+    client = genai.Client(api_key=config.GEMINI_API_KEY)
+    response = client.models.generate_content(
+        model=config.FLASH2_MODEL_THINKING,
+        contents=user_input,
+        config=types.GenerateContentConfig(
+            thinking_config=types.ThinkingConfig(include_thoughts=True),
+            http_options=types.HttpOptions(api_version='v1alpha'),
+        )
+    )
+    thinking_part = response.candidates[0].content.parts[0].text
+    final_answer = response.candidates[0].content.parts[1].text
+
+    response = ReasoningModelResponse(
+        reasoning_content=thinking_part, 
+        final_answer=final_answer)
+    return response 

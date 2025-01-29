@@ -17,6 +17,8 @@ from pydantic_ai.models.gemini import GeminiModel
 from markitdown import MarkItDown
 from config import Config
 
+config = Config()
+
 def get_perplexity_search_results(query: str) -> Tuple[str, List[str]]:
     """
     Searches Perplexity API with error handling
@@ -48,8 +50,8 @@ def get_perplexity_search_results(query: str) -> Tuple[str, List[str]]:
     try:
         # Create an OpenAI client using the provided API key and base URL
         client = OpenAI(
-            api_key=Config.PERPLEXITY_API_KEY, 
-            base_url=Config.PERPLEXITY_BASE_URL
+            api_key=config.PERPLEXITY_API_KEY, 
+            base_url=config.PERPLEXITY_BASE_URL
         )
 
         response = client.chat.completions.create(
@@ -108,10 +110,7 @@ def crawl_website(url_webpage):
 # Only run this block for Gemini Developer API
 client = genai.Client()
 
-flash_thinking_model = "gemini-2.0-flash-thinking-exp-01-21"
-flash2_model = "gemini-2.0-flash-exp"
-flash1_model = "gemini-1.5-flash"
-model = GeminiModel(flash2_model)
+model = GeminiModel(config.FLASH2_MODEL)
 
 class TableOfContentSection(BaseModel):
     main_chapter: str = Field(description="The main chapter or main sector.")
@@ -130,7 +129,6 @@ class ResearchDeps:
     research_topic: str = Field(description="The research topic of the document.")
     document_type: str = Field(description="The type of document for the table of content (paper/report/general document/webpage).")
     document_number_of_pages: int = Field(description="A rough estimate of how many pages the report will have. The table of content needs to reflect that.")
-
 
 table_of_content_agent = Agent(
     model,
