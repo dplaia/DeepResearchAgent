@@ -17,7 +17,6 @@ from pydantic_ai.models.gemini import GeminiModel
 from markitdown import MarkItDown
 from config import Config
 
-
 def get_perplexity_search_results(query: str) -> Tuple[str, List[str]]:
     """
     Searches Perplexity API with error handling
