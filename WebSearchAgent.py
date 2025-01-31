@@ -74,7 +74,7 @@ def save_files(topic_folder_name: str, json_response: dict, search_query: str):
     for result in json_response['organic']:
         title = result.get('title', '').replace("/", " - ")
         link = result.get('link', '')
-        markdown = crawl_website(link) if link else ''
+        markdown = crawl_website_async(link) if link else ''
         filename = title + ".md"
 
         document_data[title] = {
@@ -96,11 +96,11 @@ def initialize_agent(selected_tools: List[str] = None):
     
     # Create tool list based on selection
     all_tools = {
-        "google_general": google_general_search,
-        "scholar": google_scholar_search,
+        "google_general": google_general_search_async,
+        "scholar": google_scholar_search_async,
         #"perplexity": perplexity_search,
-        "papers_with_code": papers_with_code_search,
-        "news": google_news_search
+        "papers_with_code": papers_with_code_search_async,
+        "news": google_news_search_async
     }
     
     selected = selected_tools or list(all_tools.keys())

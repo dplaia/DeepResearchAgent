@@ -26,7 +26,7 @@ class TimeSpan(StrEnum):
     MONTH = "qdr:m"
     YEAR = "qdr:y"
 
-async def google_general_search(search_query: str, time_span: Optional[TimeSpan] = None, web_domain: Optional[str] = None) -> Optional[dict]:
+async def google_general_search_async(search_query: str, time_span: Optional[TimeSpan] = None, web_domain: Optional[str] = None) -> Optional[dict]:
     """
     Perform a Google search using the Serper API.
     
@@ -74,7 +74,7 @@ async def google_general_search(search_query: str, time_span: Optional[TimeSpan]
         response.raise_for_status()
         return response.json()
 
-async def google_scholar_search(search_query: str, num_pages: int = 1) -> dict:
+async def google_scholar_search_async(search_query: str, num_pages: int = 1) -> dict:
     """Async version of google scholar search"""
     page = 1
     papers = []
@@ -104,7 +104,7 @@ async def google_scholar_search(search_query: str, num_pages: int = 1) -> dict:
 
     return papers
 
-async def google_news_search(search_query: str, num_pages: int = 1) -> dict:
+async def google_news_search_async(search_query: str, num_pages: int = 1) -> dict:
     """Async version of google news search using Serper API
     
     Args:
@@ -146,7 +146,7 @@ class PerplexityResult(TypedDict):
     text_response: str
     citations: list[str]
 
-async def perplexity_search(search_query: str) -> PerplexityResult | None:
+async def perplexity_search_async(search_query: str) -> PerplexityResult | None:
     """Async version using AsyncOpenAI"""
     try:
         client = AsyncOpenAI(
@@ -204,7 +204,7 @@ def perplexity_sonar_reasoning(search_query: str) -> PerplexityResult | None:
         print(f"Perplexity search failed: {e}")
         return None
 
-async def papers_with_code_search(query: str, items_per_page: int = 200) -> dict | None:
+async def papers_with_code_search_async(query: str, items_per_page: int = 200) -> dict | None:
     """Async version of papers with code search"""
     try:
         async with httpx.AsyncClient() as client:
@@ -222,7 +222,7 @@ async def papers_with_code_search(query: str, items_per_page: int = 200) -> dict
         print(f"Request failed: {e}")
         return None
 
-async def map_website(url: str, include_subdomains: bool = True) -> dict | None:
+async def map_website_async(url: str, include_subdomains: bool = True) -> dict | None:
     """Map a website's content using FirecrawlApp.
     
     Args:
@@ -242,7 +242,7 @@ async def map_website(url: str, include_subdomains: bool = True) -> dict | None:
         print(f"Website mapping failed: {e}")
         return None
 
-async def scrape_website(url: str) -> dict | None:
+async def scrape_website_async(url: str) -> dict | None:
     """Scrape a website's content using FirecrawlApp.
     
     Args:
@@ -261,7 +261,7 @@ async def scrape_website(url: str) -> dict | None:
         print(f"Website scraping failed: {e}")
         return None
 
-async def crawl_website(url: str, limit: int = 10) -> dict | None:
+async def crawl_website_async(url: str, limit: int = 10) -> dict | None:
     """Crawl a website's content using FirecrawlApp.
     
     Args:
@@ -284,7 +284,7 @@ async def crawl_website(url: str, limit: int = 10) -> dict | None:
         print(f"Website crawling failed: {e}")
         return None
 
-async def crawl4ai_website_async(url_webpage: str):
+async def crawl4ai_website_async(url_webpage: str) -> str:
 
     """
     Crawl a website using the crawl4ai library.
@@ -308,7 +308,7 @@ async def crawl4ai_website_async(url_webpage: str):
         )
         return result.markdown
 
-def crawl_website(url_webpage):
+def crawl_website_async(url_webpage):
     return asyncio.run(crawl4ai_website_async(url_webpage))
 
 class ReasoningModelResponse(BaseModel):

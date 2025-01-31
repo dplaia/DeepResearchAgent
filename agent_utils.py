@@ -38,3 +38,12 @@ def is_pdf_url(url: str, timeout: int = config.REQUEST_TIMEOUT) -> bool:
     except RequestException as e:
         print(f"Error checking PDF URL: {str(e)}")
         return False
+
+def word_count(text: str) -> int:
+    import re
+
+    text = "This is a sample text, with punctuation!"
+    words = re.findall(r'\b\w+\b', text)
+    word_count = len(words)
+
+    return word_count
