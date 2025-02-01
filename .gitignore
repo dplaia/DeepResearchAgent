@@ -171,6 +171,9 @@ cython_debug/
 .pypirc
 uv.lock
 test-time-compute/
-*.md
+#*.md
 .aider*
 result.json
+.vscode/launch.json
+*.pdf
+*.html
