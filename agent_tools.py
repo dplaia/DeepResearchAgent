@@ -26,6 +26,7 @@ class TimeSpan(StrEnum):
     MONTH = "qdr:m"
     YEAR = "qdr:y"
 
+
 async def google_general_search_async(search_query: str, time_span: Optional[TimeSpan] = None, web_domain: Optional[str] = None) -> Optional[dict]:
     """
     Perform a Google search using the Serper API.

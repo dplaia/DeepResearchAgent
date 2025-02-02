@@ -5,44 +5,63 @@ from collections import deque
 from functools import wraps
 import time
 import threading
-
+import os
+from os.path import join
 from config import Config
+from typing import Dict, Optional, List
+from rich.console import Console
+from rich.markdown import Markdown
+console = Console()
 
 config = Config()
 
-_rate_limit_registry = {}
-_registry_lock = threading.Lock()
 
-def rate_limit(name: str, rpm: int = 10):
-    """Decorator to enforce RPM limits for function groups"""
-    with _registry_lock:
-        if name not in _rate_limit_registry:
-            _rate_limit_registry[name] = {
-                'timestamps': deque(maxlen=rpm),
-                'lock': threading.Lock(),
-                'window': 60.0
-            }
+def console_print(text: str, markdown: bool = True):
+    if markdown:
+        console.print(Markdown(text))
+    else:
+        console.print(text)
 
-    def decorator(func):
+class RateLimiter:
+    def __init__(self, rpm: int = 10, window: float = 60.0):
+        self.rpm = rpm
+        self.window = window
+        self.timestamps = deque(maxlen=rpm)
+        self.lock = threading.Lock()
+
+    def __call__(self, func):
         @wraps(func)
         def wrapper(*args, **kwargs):
-            group = _rate_limit_registry[name]
-            with group['lock']:
+            with self.lock:
                 now = time.time()
-                
-                if len(group['timestamps']) >= rpm:
-                    oldest = group['timestamps'][0]
+                if len(self.timestamps) >= self.rpm:
+                    oldest = self.timestamps[0]
                     elapsed = now - oldest
-                    
-                    if elapsed < group['window']:
-                        sleep_time = group['window'] - elapsed
+                    if elapsed < self.window:
+                        sleep_time = self.window - elapsed
                         time.sleep(sleep_time)
                         now = time.time()
-                
-                group['timestamps'].append(now)
+                self.timestamps.append(now)
             return func(*args, **kwargs)
         return wrapper
-    return decorator
+
+def apply_rate_limit(functions, agent_name, rpm_value):
+    rate_limiter = RateLimiter(rpm=rpm_value) # Create a rate limiter instance
+    return [rate_limiter(func) for func in functions]
+
+def read_system_prompt(name: str) -> Optional[str]:
+    if not name.endswith(".txt"):
+        name = f"{name}.txt"
+
+    directory = 'system_prompts'
+    filepath = join(directory, name)
+    if os.path.exists(filepath):
+        with open(filepath, "r", encoding="utf-8") as f:
+            prompt = f.read()
+        return prompt
+    else:
+        print(f"File {name} does not exists in folder {directory}.")
+    return None
 
 def is_pdf_url(url: str, timeout: int = config.REQUEST_TIMEOUT) -> bool:
     """
