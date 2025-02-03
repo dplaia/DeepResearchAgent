@@ -11,9 +11,10 @@ dependencies = [
     "ipykernel>=6.29.5",
     "loguru>=0.7.3",
     "markitdown>=0.0.1a3",
-    "pydantic-ai>=0.0.19",
+    "pydantic-ai[logfire]>=0.0.19",
     "pydantic-ai-slim[openai]>=0.0.19",
     "pydantic-settings>=2.7.1",
     "requests>=2.32.3",
     "rich>=13.9.4",
+    "logfire[httpx]>=3.4.0",
 ]

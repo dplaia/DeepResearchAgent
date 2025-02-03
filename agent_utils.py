@@ -49,6 +49,39 @@ def apply_rate_limit(functions, agent_name, rpm_value):
     rate_limiter = RateLimiter(rpm=rpm_value) # Create a rate limiter instance
     return [rate_limiter(func) for func in functions]
 
+class AsyncFunctionCallLimiter:
+    def __init__(self, num: int):
+        """
+        Initializes the AsyncFunctionCallLimiter for async functions.
+
+        Args:
+            num: The maximum number of times EACH decorated async function can be called in total.
+        """
+        self.num = num
+        self.function_call_counts = {}  # Dictionary to track call counts per function
+        self.lock = asyncio.Lock()
+
+    def __call__(self, func):
+        @wraps(func)
+        async def wrapper(*args, **kwargs):
+            func_name = func.__name__  # Get the function name
+
+            async with self.lock:
+                if func_name not in self.function_call_counts:
+                    self.function_call_counts[func_name] = 0  # Initialize count if not seen before
+
+                if self.function_call_counts[func_name] < self.num:
+                    self.function_call_counts[func_name] += 1
+                    print(f"Call count (async) for '{func_name}': {self.function_call_counts[func_name]}/{self.num}")
+                    return await func(*args, **kwargs)
+                else:
+                    return f"""Function call limit ({self.num}) reached for tool/function '{func.__name__}'. 
+                    Please don't call this function again (you will get the same response every time.)."""
+
+        return wrapper
+
+
+
 def read_system_prompt(name: str) -> Optional[str]:
     if not name.endswith(".txt"):
         name = f"{name}.txt"

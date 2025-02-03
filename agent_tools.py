@@ -1,20 +1,42 @@
 import os
 from enum import StrEnum
-from typing import Optional, TypedDict, List
+from typing import Optional, TypedDict, List, Type, TypeVar, Generic
 import httpx
 from config import Config
 import requests
 import json
-from openai import AsyncOpenAI, BaseModel
 from firecrawl import FirecrawlApp
 from agent_utils import *
 from pydantic import BaseModel, Field
+from pydantic_ai.result import RunResult
+from pydantic_ai import Agent, RunContext
+from pydantic_ai.models.gemini import GeminiModel
+from pydantic_ai.models import Model
+from pydantic_ai.exceptions import UsageLimitExceeded
+from pydantic_ai.usage import UsageLimits
 from google import genai
 from google.genai import types
-from openai import OpenAI
-from openai import AsyncOpenAI
+from openai import OpenAI, AsyncOpenAI
+
+from crawl4ai import *
 
 config = Config()
+
+T = TypeVar('T', bound=BaseModel)
+
+class BaseAgent(Generic[T]):
+    def __init__(self, result_type: Type[T], system_prompt: str = "", model: Model = None):
+        if not model:
+            model = GeminiModel(config.FLASH2_MODEL)
+
+        self.agent = Agent(
+            model,
+            result_type=result_type,
+            system_prompt=system_prompt)
+
+    async def run(self, user_input) -> RunResult:
+        return await self.agent.run(user_input)
+
 
 class TimeSpan(StrEnum):
     """
@@ -25,7 +47,6 @@ class TimeSpan(StrEnum):
     WEEK = "qdr:w"
     MONTH = "qdr:m"
     YEAR = "qdr:y"
-
 
 async def google_general_search_async(search_query: str, time_span: Optional[TimeSpan] = None, web_domain: Optional[str] = None) -> Optional[dict]:
     """
@@ -243,7 +264,7 @@ async def map_website_async(url: str, include_subdomains: bool = True) -> dict |
         print(f"Website mapping failed: {e}")
         return None
 
-async def scrape_website_async(url: str) -> dict | None:
+def scrape_website_firecrawl(url: str) -> dict | None:
     """Scrape a website's content using FirecrawlApp.
     
     Args:
@@ -262,7 +283,7 @@ async def scrape_website_async(url: str) -> dict | None:
         print(f"Website scraping failed: {e}")
         return None
 
-async def crawl_website_async(url: str, limit: int = 10) -> dict | None:
+def crawl_website_firecrawl(url: str, limit: int = 10) -> dict | None:
     """Crawl a website's content using FirecrawlApp.
     
     Args:
@@ -313,7 +334,7 @@ def crawl_website_async(url_webpage):
     return asyncio.run(crawl4ai_website_async(url_webpage))
 
 class ReasoningModelResponse(BaseModel):
-    reasoning_content: str = Field(description="The reasoning/thinking chain-of-thought output of the model.")
+    reasoning_content: Optional[str] = Field(description="The reasoning/thinking chain-of-thought output of the model.")
     final_answer: str = Field(description="The final response/answer of the model (after thinking).")
 
 def deepseekR1_call(user_input: str) -> ReasoningModelResponse:
@@ -404,10 +425,42 @@ def gemini_flash2_thinking_call(user_input: str) -> ReasoningModelResponse:
             http_options=types.HttpOptions(api_version='v1alpha'),
         )
     )
-    thinking_part = response.candidates[0].content.parts[0].text
-    final_answer = response.candidates[0].content.parts[1].text
+    if len(response.candidates[0].content.parts) > 1:
 
-    response = ReasoningModelResponse(
-        reasoning_content=thinking_part, 
-        final_answer=final_answer)
+        thinking_part = response.candidates[0].content.parts[0].text
+        final_answer = response.candidates[0].content.parts[1].text
+
+        response = ReasoningModelResponse(
+            reasoning_content=thinking_part, 
+            final_answer=final_answer)
+    else:
+        response = ReasoningModelResponse(
+            reasoning_content=None, 
+            final_answer=response.candidates[0].content.parts[0].text)
+        
     return response 
+
+class ChatHandler:
+    """
+    A class to handle chats using the genai Client and Chat objects.
+    """
+    
+    def __init__(self, api_key: str, model: str):
+        """
+        Initializes the ChatHandler with the given API key and model.
+        
+        :param api_key: Your Gemini API key.
+        :param model: The model identifier to be used for the chat.
+        """
+        self.client = genai.Client(api_key=api_key)
+        self.chat = self.client.chats.create(model=model)
+    
+    def send_question(self, question: str) -> str:
+        """
+        Sends a question to the chat and returns the text response.
+        
+        :param question: The question you want to ask.
+        :return: The text response from the chat.
+        """
+        response = self.chat.send_message(question)
+        return response.text

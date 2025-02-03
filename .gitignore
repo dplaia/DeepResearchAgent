@@ -177,3 +177,5 @@ result.json
 .vscode/launch.json
 *.pdf
 *.html
+input_files/Vorhabenbeschreibung_NeuroTrust.txt
+*.pkl
