@@ -15,6 +15,7 @@ class Config(BaseSettings):
     OPENROUTER_BASE_URL: str = Field(default="https://openrouter.ai/api/v1")
     DEEPSEEK_BASE_URL: str = Field(default="https://api.deepseek.com")
 
+
     # API Keys
     SERPER_API_KEY: str = Field(..., env="SERPER_API_KEY")
     PAPERS_WITH_CODE_CSRF_TOKEN: str = Field(default="2ix1PR0FtUWIW5ePo08I3vhgHsvJ6fpqj0x1Ijjo4egxiofnUBzkX67bnHwbNd8G")
@@ -35,12 +36,13 @@ class Config(BaseSettings):
     # Model Settings
     FLASH1_MODEL: str = Field(default="gemini-1.5-flash") # (free)
     FLASH2_MODEL: str = Field(default="gemini-2.0-flash-exp") # (free)
-    FLASH2_MODEL_THINKING: str = Field(default="gemini-2.0-flash-thinking-exp-01-21") # (free)
+    FLASH2_MODEL_THINKING: str = Field(default='gemini-2.0-flash-thinking-exp-01-21') # (free)
     DEEPSEEK_R1: str = Field(default="deepseek-reasoner") # (paid)
     OPENROUTER_DEEPSEEK_R1_FREE: str = Field(default="deepseek/deepseek-r1:free") # OpenRouter (free)
     OPENROUTER_DEEPSEEK_R1: str = Field(default="deepseek/deepseek-r1") # OpenRouter (paid)
     OPENROUTER_PERPLEXITY_SONAR_REASONING: str = Field(default="perplexity/sonar-reasoning") # OpenRouter (paid)
 
+    BASEAGENT_MODEL:str = Field(default='gemini-2.0-flash-thinking-exp-01-21') 
 
     class Config:
         env_file = ".env"

@@ -1,20 +1,47 @@
-import re
-import asyncio
-import requests
-from collections import deque
-from functools import wraps
-import time
-import threading
 import os
-from os.path import join
-from config import Config
-from typing import Dict, Optional, List
+import time
+import pickle
+from os.path import join, exists, basename
+from os import listdir, makedirs
+from datetime import datetime
+from google import genai
+from google.genai import types
+from openai import OpenAI, AsyncOpenAI
+import requests
+import json
+from pydantic import BaseModel, Field
+from crawl4ai import *
+from pydantic_ai.result import RunResult
+from pydantic_ai import Agent, RunContext
+from pydantic_ai.models.gemini import GeminiModel
+from pydantic_ai.exceptions import UsageLimitExceeded
+from pydantic_ai.usage import UsageLimits
+from rich import print as rprint
 from rich.console import Console
 from rich.markdown import Markdown
+from queue import Queue, Empty
+from dataclasses import dataclass, field
+from uuid import UUID, uuid4
+from typing import Dict, Optional, List
+from typing import TypeVar, Generic
+from markitdown import MarkItDown
+import asyncio
+import nest_asyncio 
+# Add this line to allow nested event loops
+nest_asyncio.apply()
+import copy
+import re
+from collections import deque
+from functools import wraps
+import threading
+
+from config import Config
+
+from loguru import logger
+import logfire
+
 console = Console()
-
 config = Config()
-
 
 def console_print(text: str, markdown: bool = True):
     if markdown:
@@ -80,7 +107,21 @@ class AsyncFunctionCallLimiter:
 
         return wrapper
 
+def scrubbing_callback(m: logfire.ScrubMatch):
+    if (
+        m.path == ('message', 'prompt')
+        and m.pattern_match.group(0) == 'Auth'
+    ):
+        return m.value
 
+    if (
+        m.path == ('attributes', 'prompt')
+        and m.pattern_match.group(0) == 'Auth'
+    ):
+        return m.value
+
+    if m.path == ('attributes', 'agent', 'model', 'auth'):
+        return m.value
 
 def read_system_prompt(name: str) -> Optional[str]:
     if not name.endswith(".txt"):

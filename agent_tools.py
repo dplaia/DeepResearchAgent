@@ -22,17 +22,19 @@ from crawl4ai import *
 
 config = Config()
 
-T = TypeVar('T', bound=BaseModel)
-
-class BaseAgent(Generic[T]):
-    def __init__(self, result_type: Type[T], system_prompt: str = "", model: Model = None):
+# BaseAgent without dependencies, simple to use
+class BaseAgent():
+    def __init__(self, result_type = str, system_prompt: str = "", model: Model = None):
         if not model:
-            model = GeminiModel(config.FLASH2_MODEL)
+            model = GeminiModel(config.BASEAGENT_MODEL)
 
         self.agent = Agent(
             model,
             result_type=result_type,
             system_prompt=system_prompt)
+
+    async def __call__(self, user_input) -> RunResult:
+        return await self.agent.run(user_input)
 
     async def run(self, user_input) -> RunResult:
         return await self.agent.run(user_input)
@@ -388,7 +390,7 @@ def deepseekR1_call(user_input: str) -> ReasoningModelResponse:
         final_answer=final_content)
     return response        
 
-def free_deepseekR1_call(user_input: str) -> ReasoningModelResponse:
+def openrouter_deepseekR1_call(user_input: str) -> ReasoningModelResponse:
 
     url = f"{config.OPENROUTER_BASE_URL}/chat/completions"
     headers = {
@@ -445,15 +447,22 @@ class ChatHandler:
     A class to handle chats using the genai Client and Chat objects.
     """
     
-    def __init__(self, api_key: str, model: str):
+    def __init__(self, api_key: str = None, model: Model = None):
         """
         Initializes the ChatHandler with the given API key and model.
         
         :param api_key: Your Gemini API key.
         :param model: The model identifier to be used for the chat.
         """
+
+        if not model:
+            model_name = config.FLASH2_MODEL_THINKING
+            api_key = config.GEMINI_API_KEY
+        else:
+            model_name = model.model_name
+
         self.client = genai.Client(api_key=api_key)
-        self.chat = self.client.chats.create(model=model)
+        self.chat = self.client.chats.create(model=model_name)
     
     def send_question(self, question: str) -> str:
         """
