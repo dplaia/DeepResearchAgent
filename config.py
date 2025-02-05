@@ -35,14 +35,16 @@ class Config(BaseSettings):
     
     # Model Settings
     FLASH1_MODEL: str = Field(default="gemini-1.5-flash") # (free)
-    FLASH2_MODEL: str = Field(default="gemini-2.0-flash-exp") # (free)
-    FLASH2_MODEL_THINKING: str = Field(default='gemini-2.0-flash-thinking-exp-01-21') # (free)
+    FLASH2_MODEL: str = Field(default="gemini-2.0-flash") # (free, 1500 req/day, 15 RPM)
+    PRO2_MODEL: str = Field(default="gemini-2.0-pro-exp-02-05") # (free, 50 req/day, 2 RPM)
+    LITE2_MODEL: str = Field(default="gemini-2.0-flash-lite-preview-02-05") # (free, 1500 req/day, 30 RPM)
+    FLASH2T_MODEL: str = Field(default='gemini-2.0-flash-thinking-exp-01-21') # (free)
     DEEPSEEK_R1: str = Field(default="deepseek-reasoner") # (paid)
     OPENROUTER_DEEPSEEK_R1_FREE: str = Field(default="deepseek/deepseek-r1:free") # OpenRouter (free)
     OPENROUTER_DEEPSEEK_R1: str = Field(default="deepseek/deepseek-r1") # OpenRouter (paid)
     OPENROUTER_PERPLEXITY_SONAR_REASONING: str = Field(default="perplexity/sonar-reasoning") # OpenRouter (paid)
 
-    BASEAGENT_MODEL:str = Field(default='gemini-2.0-flash-thinking-exp-01-21') 
+    BASEAGENT_MODEL:str = Field(default='gemini-2.0-flash') 
 
     class Config:
         env_file = ".env"

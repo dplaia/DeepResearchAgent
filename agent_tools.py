@@ -40,6 +40,47 @@ class BaseAgent():
         return await self.agent.run(user_input)
 
 
+class ChatHandler:
+    """
+    A class to handle chats using the genai Client and Chat objects.
+    """
+    
+    def __init__(self, api_key: str = None, model: Model = None):
+        """
+        Initializes the ChatHandler with the given API key and model.
+        
+        :param api_key: Your Gemini API key.
+        :param model: The model identifier to be used for the chat.
+        """
+
+        if not model:
+            model_name = config.FLASH2T_MODEL
+            api_key = config.GEMINI_API_KEY
+        else:
+            model_name = model.model_name
+
+        self.client = genai.Client(api_key=api_key)
+        #self.chat = self.client.chats.create(model=model_name) # sync
+        self.chat = self.client.aio.chats.create(model=model_name) # async
+    
+    async def __call__(self, question: str) -> str:
+        """
+        Sends a question to the chat and returns the text response.
+        
+        :param question: The question you want to ask.
+        :return: The text response from the chat.
+        """
+        response = await self.chat.send_message(question)
+        return response.text
+    
+async def count_tokens(content: str, model_name: str):
+    client = genai.Client(api_key=config.GEMINI_API_KEY)
+    response = await client.aio.models.count_tokens(
+        model=model_name,
+        contents=content,
+    )
+    print(response)
+
 class TimeSpan(StrEnum):
     """
     Time span specification for Google search using Pydantic StrEnum.
@@ -50,7 +91,9 @@ class TimeSpan(StrEnum):
     MONTH = "qdr:m"
     YEAR = "qdr:y"
 
-async def google_general_search_async(search_query: str, time_span: Optional[TimeSpan] = None, web_domain: Optional[str] = None) -> Optional[dict]:
+async def google_general_search_async(search_query: str, 
+                                        time_span: Optional[TimeSpan] = None, 
+                                        web_domain: Optional[str] = None) -> Optional[dict]:
     """
     Perform a Google search using the Serper API.
     
@@ -420,7 +463,7 @@ def gemini_flash2_thinking_call(user_input: str) -> ReasoningModelResponse:
     # Only run this block for Gemini Developer API
     client = genai.Client(api_key=config.GEMINI_API_KEY)
     response = client.models.generate_content(
-        model=config.FLASH2_MODEL_THINKING,
+        model=config.FLASH2T_MODEL,
         contents=user_input,
         config=types.GenerateContentConfig(
             thinking_config=types.ThinkingConfig(include_thoughts=True),
@@ -441,35 +484,3 @@ def gemini_flash2_thinking_call(user_input: str) -> ReasoningModelResponse:
             final_answer=response.candidates[0].content.parts[0].text)
         
     return response 
-
-class ChatHandler:
-    """
-    A class to handle chats using the genai Client and Chat objects.
-    """
-    
-    def __init__(self, api_key: str = None, model: Model = None):
-        """
-        Initializes the ChatHandler with the given API key and model.
-        
-        :param api_key: Your Gemini API key.
-        :param model: The model identifier to be used for the chat.
-        """
-
-        if not model:
-            model_name = config.FLASH2_MODEL_THINKING
-            api_key = config.GEMINI_API_KEY
-        else:
-            model_name = model.model_name
-
-        self.client = genai.Client(api_key=api_key)
-        self.chat = self.client.chats.create(model=model_name)
-    
-    def send_question(self, question: str) -> str:
-        """
-        Sends a question to the chat and returns the text response.
-        
-        :param question: The question you want to ask.
-        :return: The text response from the chat.
-        """
-        response = self.chat.send_message(question)
-        return response.text

@@ -1,0 +1,9 @@
+Let's assume you have access to the Google Search API and the Google Scholar API. 
+
+    Based on the folling document, which search queries would you do, to improve the content quality of the given input document (see below)?
+    Please fokus more on the research topic, not the style and format of the document. 
+
+    Please give your response in the following format (separate these parts):
+    - List of suitable google search queries
+    - List of suitable google scholar search queries
+    - A special summary of the input document that enables an external LLM or agent to validate the search result (downloaded text). How relevant is the search result to the content of the document (by comparing it with the generated summary)?

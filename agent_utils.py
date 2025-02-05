@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field
 from crawl4ai import *
 from pydantic_ai.result import RunResult
 from pydantic_ai import Agent, RunContext
+from pydantic_ai.models import Model
 from pydantic_ai.models.gemini import GeminiModel
 from pydantic_ai.exceptions import UsageLimitExceeded
 from pydantic_ai.usage import UsageLimits
@@ -123,7 +124,7 @@ def scrubbing_callback(m: logfire.ScrubMatch):
     if m.path == ('attributes', 'agent', 'model', 'auth'):
         return m.value
 
-def read_system_prompt(name: str) -> Optional[str]:
+def get_system_prompt(name: str) -> Optional[str]:
     if not name.endswith(".txt"):
         name = f"{name}.txt"
 
