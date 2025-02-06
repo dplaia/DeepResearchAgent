@@ -50,6 +50,28 @@ def console_print(text: str, markdown: bool = True):
     else:
         console.print(text)
 
+def save_data(data, name):
+    dump_folder = "temp_data/"
+    file_path = join(dump_folder, name + ".pkl")
+    with open(file_path, "wb") as f:
+        pickle.dump(data, f)
+
+def load_data(name):
+    dump_folder = "temp_data/"
+    file_path = join(dump_folder, name + ".pkl")
+
+    if exists(file_path):
+        with open(file_path, "rb") as f:
+            data = pickle.load(f)
+
+        return data
+    
+    return None
+
+
+
+
+
 class RateLimiter:
     def __init__(self, rpm: int = 10, window: float = 60.0):
         self.rpm = rpm

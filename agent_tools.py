@@ -73,6 +73,107 @@ class ChatHandler:
         response = await self.chat.send_message(question)
         return response.text
     
+class BasicSearchAgent:
+    """
+    A class to handle basic websearch usinig the google grounding tool.
+    """
+    
+    def __init__(self, perplexity_search: bool = False):
+        """
+        Initializes the BasicSearchAgent.
+
+        Args:
+        - perplexity_search (includes Perplexity search results)
+        """
+
+        self.client = genai.Client(api_key=config.GEMINI_API_KEY)
+        self.perplexity = perplexity_search
+        
+
+    async def __call__(self, query: str):
+        """
+        Sends a search query and returns the search results in form of text.
+        
+        :param query: The query you want to search for.
+        :return: The text response from the chat.
+        """
+        import datetime
+        now = datetime.datetime.now()
+        date_time_string = now.strftime("%Y-%m-%d %H:%M:%S")
+
+        modified_query = f"""Current Date/time: {date_time_string}
+        
+        Search Query:
+        {query}"""
+
+        response = self.client.models.generate_content(
+            model=config.FLASH2_MODEL,
+            contents=modified_query,
+            config=types.GenerateContentConfig(
+                tools=[types.Tool(
+                    google_search=types.GoogleSearchRetrieval
+                )]
+            )
+        )
+
+        # Build the text response from the JSON response
+        main_response = response.candidates[0].content.parts[0].text
+        output_text = f"{main_response}"
+
+        grounding_chunks = response.candidates[0].grounding_metadata.grounding_chunks
+        grounding_supports = response.candidates[0].grounding_metadata.grounding_supports
+
+        for grounding_support in grounding_supports:
+            #confidence_scores = grounding_support.confidence_scores
+            indices = grounding_support.grounding_chunk_indices
+            segment = grounding_support.segment
+            #end_index = segment.end_index
+            segment_text = segment.text
+
+            new_segment_text = f"{segment_text} "
+
+            for k in indices:
+                new_segment_text += f"[{k+1}]"
+
+            output_text = output_text.replace(segment_text, new_segment_text)
+
+        if len(grounding_chunks) > 0:
+
+            output_text += f"""
+            
+            References:
+            
+            """
+
+            for k, grounding_chunk in enumerate(grounding_chunks):
+                output_text += f"[{k+1}] {grounding_chunk.web.title} {grounding_chunk.web.uri}\n"
+
+        if self.perplexity:
+            perplexity_results = perplexity_sonar_reasoning(query)
+
+            citation_text = ""
+            for k, url in enumerate(perplexity_results['citations']):
+                citation_text += f"[{k}] {url}\n"
+
+            output_text = f"""Google Search Results: 
+
+            {output_text}
+            
+            --------------------------
+            Perplexity Search Results:
+
+            {perplexity_results['text_response']}
+
+            References:
+
+            {citation_text}
+
+            """
+
+
+
+        return output_text
+
 async def count_tokens(content: str, model_name: str):
     client = genai.Client(api_key=config.GEMINI_API_KEY)
     response = await client.aio.models.count_tokens(
