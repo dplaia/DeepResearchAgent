@@ -5,8 +5,6 @@ import argparse
 
 config = Config()
 
-# Log to a file with custom timestamp format
-logger.add("logs/chain_of_thougth_agent_system.log", format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {message}")
 model = GeminiModel(config.FLASH2_MODEL)
 
 reasoningAgentChat = ChatHandler()
@@ -35,53 +33,8 @@ urlRatingAgent = BaseAgent(URLRatingAgentResponse,
         with  
         {URL number, Rating}""")
 
-def get_document():
-    documents = {}
-    folder_name = 'input_files/'
 
-    # Create directory if it doesn't exist
-    if not exists(folder_name):
-        makedirs(folder_name, exist_ok=True)
-
-    main_input_file = join(folder_name, "Vorhabenbeschreibung_NeuroTrust.txt")
-
-    if not exists(main_input_file):
-        print("file does not exists")
-        # Process each file in the input directory
-        for filename in listdir(folder_name):
-            filepath = join(folder_name, filename)
-            
-            if not os.path.isfile(filepath):
-                continue
-                
-            try:
-                md = MarkItDown()
-                result = md.convert(filepath)
-                filename = os.path.basename(filepath)
-                documents[filename] = result.text_content
-            except Exception as e:
-                print(f"Error processing {filepath}: {str(e)}")
-                continue
-
-        doc = ""
-        for filename in documents:
-            print(f"Filename: {filename}")
-            doc = documents[filename]
-            count = word_count(doc)
-            print(f"Number of Words in the document: {count}")
-
-            break
-
-        with open(main_input_file, "w", encoding="utf-8") as f:
-            f.write(doc)
-
-    else:
-        with open(main_input_file, "r", encoding="utf-8") as f:
-            doc = f.read()
-
-    return doc
-
-async def get_search_queries_for_document(doc: str):
+def get_search_queries_for_document(doc: str):
     query = get_system_prompt("search_query_recommendation")
     query += f"""
     # Input Document: 
@@ -89,12 +42,12 @@ async def get_search_queries_for_document(doc: str):
     {doc}
     """
     
-    text_response = await reasoningAgentChat(query)
-    queries = await searchQueryAgent(f"Please extract all search queries from this text: {text_response}")
+    text_response = reasoningAgentChat(query)
+    queries = searchQueryAgent(f"Please extract all search queries from this text: {text_response}")
 
     return queries.data
 
-async def get_search_query_help(query: str):
+def get_search_query_help(query: str):
 
     query += f"""
     We have to improve the search results given a user search query. 
@@ -112,12 +65,12 @@ async def get_search_query_help(query: str):
 
     """
     
-    text_response = await reasoningAgentChat(query)
-    queries = await searchQueryAgent(f"Please extract all search queries from this text: {text_response}")
+    text_response = reasoningAgentChat(query)
+    queries = searchQueryAgent(f"Please extract all search queries from this text: {text_response}")
 
     return queries.data
 
-async def rate_search_results(content_text: str):
+def rate_search_results(content_text: str):
     query = f"""
     Please rate each search result based on relevance (value between 0 and 100).
     Each search result has an URL with an URL number, 
@@ -135,9 +88,9 @@ async def rate_search_results(content_text: str):
     
     {content_text}
     """
-    text_response = await reasoningAgent(query)
+    text_response = reasoningAgent(query)
 
-    url_info = await urlRatingAgent(f"Please extract the url info in this text: {text_response}")
+    url_info = urlRatingAgent(f"Please extract the url info in this text: {text_response}")
 
     return url_info.data
 
@@ -172,13 +125,12 @@ async def generate_research_report(user_search_query, result_text) -> str:
 
     return response
 
-
-async def run_search(user_search_query: str, max_searches:int = 5, use_perplexity: bool=False) -> None:
+def run_search(user_search_query: str, max_searches:int = 5, use_perplexity: bool=False) -> None:
     global basicSearchAgent
     basicSearchAgent = BasicSearchAgent(perplexity_search=use_perplexity)
 
-    queries = await get_search_query_help(user_search_query)
-    results = await search_queries(queries.google_search_queries[:max_searches])
+    queries = get_search_query_help(user_search_query)
+    results = search_queries(queries.google_search_queries[:max_searches])
 
     result_text = ""
 
@@ -191,10 +143,10 @@ async def run_search(user_search_query: str, max_searches:int = 5, use_perplexit
 
         """
 
-    response = await generate_research_report(user_search_query, result_text)
+    response = generate_research_report(user_search_query, result_text)
     return response
 
-async def main():
+def main():
     parser = argparse.ArgumentParser(description="Run extended web searches.")
     parser.add_argument("user_search_query", type=str, help="The initial search query.")
     parser.add_argument("-m", "--max_searches", type=int, default=5, help="Maximum number of searches to perform.")
@@ -202,9 +154,8 @@ async def main():
 
     args = parser.parse_args()
 
-    report_text = await run_search(args.user_search_query, args.max_searches, args.use_perplexity)
+    report_text = run_search(args.user_search_query, args.max_searches, args.use_perplexity)
     console_print(report_text)
 
-
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
