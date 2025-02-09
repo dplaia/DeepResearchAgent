@@ -40,7 +40,7 @@ class BaseAgent():
         return await self.agent.run(user_input)
 
 
-class ChatHandler:
+class ChatHandlerAsync:
     """
     A class to handle chats using the genai Client and Chat objects.
     """
@@ -72,7 +72,41 @@ class ChatHandler:
         """
         response = await self.chat.send_message(question)
         return response.text
+
+class ChatHandler:
+    """
+    A class to handle chats using the genai Client and Chat objects.
+    """
     
+    def __init__(self, api_key: str = None, model: Model = None):
+        """
+        Initializes the ChatHandler with the given API key and model.
+        
+        :param api_key: Your Gemini API key.
+        :param model: The model identifier to be used for the chat.
+        """
+
+        if not model:
+            model_name = config.FLASH2T_MODEL
+            api_key = config.GEMINI_API_KEY
+        else:
+            model_name = model.model_name
+
+        self.client = genai.Client(api_key=api_key)
+        self.chat = self.client.chats.create(model=model_name) # sync
+        #self.chat = self.client.aio.chats.create(model=model_name) # async
+    
+    def __call__(self, question: str) -> str:
+        """
+        Sends a question to the chat and returns the text response.
+        
+        :param question: The question you want to ask.
+        :return: The text response from the chat.
+        """
+        response = self.chat.send_message(question)
+        return response.text
+    
+
 class BasicSearchAgent:
     """
     A class to handle basic websearch usinig the google grounding tool.
@@ -90,7 +124,7 @@ class BasicSearchAgent:
         self.perplexity = perplexity_search
         
 
-    async def __call__(self, query: str):
+    def __call__(self, query: str):
         """
         Sends a search query and returns the search results in form of text.
         
@@ -169,9 +203,6 @@ class BasicSearchAgent:
             {citation_text}
 
             """
-
-
-
         return output_text
 
 async def count_tokens(content: str, model_name: str):

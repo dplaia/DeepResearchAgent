@@ -68,10 +68,6 @@ def load_data(name):
     
     return None
 
-
-
-
-
 class RateLimiter:
     def __init__(self, rpm: int = 10, window: float = 60.0):
         self.rpm = rpm
@@ -223,3 +219,5 @@ def test_word_count():
     # Punctuation handling
     assert word_count("Hello, world!") == 2
     assert word_count("Rock 'n' roll") == 3  # Apostrophes in quotes
+
+
