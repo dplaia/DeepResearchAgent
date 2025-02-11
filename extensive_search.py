@@ -91,14 +91,15 @@ def generate_research_report(user_search_query, result_text) -> str:
         [5] [aljazeera.com](https://...)
         [6] etc. 
 
-        The text should be as relevant to the user search query as possible. 
+        The text should be as relevant to the user search query as possible. The language report depends on the user query. 
+        If the user query is in English, write the report only in English. If the user query is in German, write the report only in German, etc. 
 
         # User Search Query:
         {user_search_query} 
 
         #Search Results (text):
         {result_text}
-             
+
 
         """)    
 
@@ -154,9 +155,6 @@ def main():
             f.write(report_text)
 
     console_print(report_text)
-
-
-
 
 
 if __name__ == "__main__":
