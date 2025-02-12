@@ -1,1 +1,15 @@
 crawl4ai
+controlflow
+firecrawl
+google-genai
+ipykernel
+loguru
+markitdown
+pydantic-ai[logfire]
+pydantic-ai-slim[openai]
+pydantic-settings
+requests
+rich
+logfire[httpx]
+langchain-google-genai
+ipywidgets

@@ -1,6 +1,6 @@
-from pydantic import Field
+from pydantic import Field, ConfigDict
 from pydantic_settings import BaseSettings
-from typing import Final
+from typing import Final, Optional
 
 class Config(BaseSettings):
     """Global configuration settings"""
@@ -15,15 +15,14 @@ class Config(BaseSettings):
     OPENROUTER_BASE_URL: str = Field(default="https://openrouter.ai/api/v1")
     DEEPSEEK_BASE_URL: str = Field(default="https://api.deepseek.com")
 
+    SERPER_API_KEY: Optional[str] = Field(None, json_schema_extra={'env ': 'SERPER_API_KEY'})
+    PERPLEXITY_API_KEY: Optional[str] = Field(None, json_schema_extra={'env ': 'PERPLEXITY_API_KEY'})
+    FIRECRAWL_API_KEY: Optional[str] = Field(None, json_schema_extra={'env ': 'FIRECRAWL_API_KEY'})
+    GEMINI_API_KEY: Optional[str] = Field(None, json_schema_extra={'env ': 'GEMINI_API_KEY'})
+    DEEPSEEK_API_KEY: Optional[str] = Field(None, json_schema_extra={'env ': 'DEEPSEEK_API_KEY'})
+    OPENROUTER_API_KEY: Optional[str] = Field(None, json_schema_extra={'env ': 'OPENROUTER_API_KEY'})
 
-    # API Keys
-    SERPER_API_KEY: str = Field(..., env="SERPER_API_KEY")
     PAPERS_WITH_CODE_CSRF_TOKEN: str = Field(default="2ix1PR0FtUWIW5ePo08I3vhgHsvJ6fpqj0x1Ijjo4egxiofnUBzkX67bnHwbNd8G")
-    PERPLEXITY_API_KEY: str = Field(..., env="PERPLEXITY_API_KEY")
-    FIRECRAWL_API_KEY: str = Field(..., env="FIRECRAWL_API_KEY")
-    GEMINI_API_KEY: str = Field(..., env="GEMINI_API_KEY")
-    DEEPSEEK_API_KEY: str = Field(..., env="DEEPSEEK_API_KEY")
-    OPENROUTER_API_KEY: str = Field(..., env="OPENROUTER_API_KEY")
 
     # Tool Descriptions
     TOOL_DESCRIPTIONS: Final = {
@@ -46,6 +45,7 @@ class Config(BaseSettings):
 
     BASEAGENT_MODEL:str = Field(default='gemini-2.0-flash') 
 
-    class Config:
-        env_file = ".env"
-        extra = "ignore"
+    model_config = ConfigDict(env_file = ".env", extra = "ignore")
+    # class Config:
+    #     env_file = ".env"
+    #     extra = "ignore"
