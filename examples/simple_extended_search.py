@@ -7,9 +7,9 @@ config = Config()
 
 model = GeminiModel(config.FLASH2_MODEL)
 
-reasoningAgentChat = ChatHandler()
+reasoningAgentChat = ReasoningModel()
 
-basicSearchAgent = BasicSearchAgent(perplexity_search=False)
+basicSearchAgent = BasicSearchModel(perplexity_search=False)
 
 class SearchQueryAgentResponse(BaseModel):
     google_search_queries: list[str] | None = Field(description="The extracted google search queries (if available).")
@@ -127,7 +127,7 @@ async def generate_research_report(user_search_query, result_text) -> str:
 
 def run_search(user_search_query: str, max_searches:int = 5, use_perplexity: bool=False) -> None:
     global basicSearchAgent
-    basicSearchAgent = BasicSearchAgent(perplexity_search=use_perplexity)
+    basicSearchAgent = BasicSearchModel(perplexity_search=use_perplexity)
 
     queries = get_search_query_help(user_search_query)
     results = search_queries(queries.google_search_queries[:max_searches])

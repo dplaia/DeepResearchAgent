@@ -40,7 +40,7 @@ class BaseAgent():
         return await self.agent.run(user_input)
 
 
-class ChatHandlerAsync:
+class ReasoningModelAsync:
     """
     A class to handle chats using the genai Client and Chat objects.
     """
@@ -60,7 +60,6 @@ class ChatHandlerAsync:
             model_name = model.model_name
 
         self.client = genai.Client(api_key=api_key)
-        #self.chat = self.client.chats.create(model=model_name) # sync
         self.chat = self.client.aio.chats.create(model=model_name) # async
     
     async def __call__(self, question: str) -> str:
@@ -73,7 +72,7 @@ class ChatHandlerAsync:
         response = await self.chat.send_message(question)
         return response.text
 
-class ChatHandler:
+class ReasoningModel:
     """
     A class to handle chats using the genai Client and Chat objects.
     """
@@ -94,7 +93,6 @@ class ChatHandler:
 
         self.client = genai.Client(api_key=api_key)
         self.chat = self.client.chats.create(model=model_name) # sync
-        #self.chat = self.client.aio.chats.create(model=model_name) # async
     
     def __call__(self, question: str) -> str:
         """
@@ -104,10 +102,11 @@ class ChatHandler:
         :return: The text response from the chat.
         """
         response = self.chat.send_message(question)
+
         return response.text
     
 
-class BasicSearchAgent:
+class BasicSearchModel:
     """
     A class to handle basic websearch usinig the google grounding tool.
     """

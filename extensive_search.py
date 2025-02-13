@@ -7,8 +7,8 @@ from agent_utils import *
 from agent_tools import *
 import argparse
 
-reasoningAgentChat = ChatHandler()
-basicSearchAgent = BasicSearchAgent(perplexity_search=False)
+reasoningAgentChat = ReasoningModel()
+basicSearchAgent = BasicSearchModel(perplexity_search=False)
 
 def ask_reasoning_model(content: str) -> str:
     global reasoningAgentChat

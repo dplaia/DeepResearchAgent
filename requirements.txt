@@ -13,3 +13,4 @@ rich
 logfire[httpx]
 langchain-google-genai
 ipywidgets
+nest_asyncio
