@@ -19,11 +19,13 @@ from google.genai import types
 from openai import OpenAI, AsyncOpenAI
 
 from crawl4ai import *
+import aiohttp
+from bs4 import BeautifulSoup
 
 config = Config()
 
 # BaseAgent without dependencies, simple to use
-class BaseAgent():
+class BasicAgent():
     def __init__(self, result_type = str, system_prompt: str = "", model: Model = None):
         if not model:
             model = GeminiModel(config.BASEAGENT_MODEL)
@@ -38,7 +40,6 @@ class BaseAgent():
 
     async def run(self, user_input) -> RunResult:
         return await self.agent.run(user_input)
-
 
 class ReasoningModelAsync:
     """
@@ -105,7 +106,6 @@ class ReasoningModel:
 
         return response.text
     
-
 class BasicSearchModel:
     """
     A class to handle basic websearch usinig the google grounding tool.
@@ -493,21 +493,29 @@ async def crawl4ai_website_async(url_webpage: str) -> str:
     Returns:
         str: The crawled content in markdown format.
     """
-    
+    md = MarkItDown()
+
     if is_pdf_url(url_webpage):
-        md = MarkItDown()
         result = md.convert(url_webpage)
-        
         return result.text_content
         
-    async with AsyncWebCrawler() as crawler:
-        result = await crawler.arun(
-            url=url_webpage,
-        )
-        return result.markdown
+    # Download the HTML content
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url_webpage) as response:
+            html_text = await response.text()
 
-def crawl_website_async(url_webpage):
-    return asyncio.run(crawl4ai_website_async(url_webpage))
+    # Extract text from the HTML to determine if it has useful content
+    soup = BeautifulSoup(html_text, 'html.parser')
+    text_content = soup.get_text(strip=True)
+
+    # If the extracted text is insufficient, likely due to JavaScript rendering issues, use the crawler
+    if len(text_content) < 100:
+        async with AsyncWebCrawler() as crawler:
+            result = await crawler.arun(url=url_webpage)
+            return result.markdown
+    else:
+        result = md.convert(url_webpage)
+        return result.text_content
 
 class ReasoningModelResponse(BaseModel):
     reasoning_content: Optional[str] = Field(description="The reasoning/thinking chain-of-thought output of the model.")

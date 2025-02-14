@@ -44,13 +44,17 @@ import logfire
 console = Console()
 config = Config()
 
-def console_print(text: str, markdown: bool = True):
+def cprint(text: str, markdown: bool = True):
     if markdown:
         console.print(Markdown(text))
     else:
         console.print(text)
 
 def save_data(data, name):
+
+    if not exists("temp_data"):
+        makedirs("temp_data")
+        
     dump_folder = "temp_data/"
     file_path = join(dump_folder, name + ".pkl")
     with open(file_path, "wb") as f:
