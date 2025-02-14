@@ -8,7 +8,7 @@ from agent_tools import *
 import argparse
 
 reasoningAgentChat = ReasoningModel()
-basicSearchAgent = BasicSearchModel(perplexity_search=False)
+basicSearchAgent = BasicSearchModel()
 
 def ask_reasoning_model(content: str) -> str:
     global reasoningAgentChat

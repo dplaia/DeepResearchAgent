@@ -16,7 +16,7 @@ class SearchQueryAgentResponse(BaseModel):
     google_scholar_queries: list[str] | None = Field(description="The extracted google scholar queries (if available).")
     text_summary: str  | None = Field(description="Extract the text summary here (if available).")
 
-searchQueryAgent = BaseAgent(SearchQueryAgentResponse, 
+searchQueryAgent = BasicAgent(SearchQueryAgentResponse, 
         system_prompt="""Your goal is to extract search queries (e.g., google search, google scholar, etc.) 
         that are mention in a text.""")
 
@@ -27,7 +27,7 @@ class URLRating(BaseModel):
 class URLRatingAgentResponse(BaseModel):
     url_info: list[URLRating] = Field(description="A list with URLs with corresponding ratings.")
 
-urlRatingAgent = BaseAgent(URLRatingAgentResponse, 
+urlRatingAgent = BasicAgent(URLRatingAgentResponse, 
         system_prompt="""Your goal is to extract URL number and the corresponding rating. 
         The input text has the following format: {1, 60}, {2,75}, {3, 35} .... 
         with  
