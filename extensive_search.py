@@ -109,7 +109,7 @@ def generate_research_report(user_search_query, result_text) -> str:
 def get_search_result_text(results: list[str]) -> str:
     result_text = ""
     for k, result in enumerate(results):
-        #console_print(result)
+        #cprint(result)
         result_text += f"""
         # Result query {k+1}:
 
@@ -120,7 +120,7 @@ def get_search_result_text(results: list[str]) -> str:
 
 def run_research(search_query: str, max_searches: int = 10) -> str:
     search_queries_text = search_query_help(search_query)
-    console_print(search_queries_text)
+    cprint(search_queries_text)
 
     task_extract_search_queries = cf.Task(
         objective=f"Extract all search queries from the input text",
@@ -155,7 +155,7 @@ def main():
         with open("markdown_output.md", "w") as f:
             f.write(report_text)
 
-    console_print(report_text)
+    cprint(report_text)
 
 
 if __name__ == "__main__":
