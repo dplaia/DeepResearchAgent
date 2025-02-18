@@ -181,3 +181,11 @@ input_files/Vorhabenbeschreibung_NeuroTrust.txt
 *.pkl
 markdown_output.md
 markdown_output.md
+
+
+*.csv
+*.xlsx
+*.pdf
+*.html
+output.md
+*markdown

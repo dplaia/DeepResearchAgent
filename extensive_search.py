@@ -7,6 +7,21 @@ from agent_utils import *
 from agent_tools import *
 import argparse
 
+import argparse
+import os
+import textwrap
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+
+# Import necessary libraries for new formats like csv, html, pdf, etc.
+import pandas as pd
+from markdown2 import markdown
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
+from reportlab.lib.units import inch
+
 reasoningAgentChat = ReasoningModel()
 basicSearchAgent = BasicSearchModel()
 
@@ -139,24 +154,93 @@ def run_research(search_query: str, max_searches: int = 10) -> str:
     return response
 
 
-def main():
+def save_in_markdown(content, filename="output.md"):
+    with open(filename, 'w', encoding='utf-8') as f:
+        f.write(content)
 
+def save_in_csv(content, filename="output.csv"):
+    # Assuming `content` is a list of dictionaries or structured data
+    df = pd.DataFrame(content)
+    df.to_csv(filename, index=False)
+
+def save_in_excel(content, filename="output.xlsx"):
+    df = pd.DataFrame(content)
+    df.to_excel(filename, index=False)
+
+def save_in_pdf(content, filename="output.pdf"):
+    # Create the PDF document with proper margins
+    doc = SimpleDocTemplate(
+        filename,
+        pagesize=letter,
+        rightMargin=72,  # 1 inch margins
+        leftMargin=72,
+        topMargin=72,
+        bottomMargin=72
+    )
+    
+    # Create a list to hold the content
+    story = []
+    
+    # Create a custom paragraph style
+    styles = getSampleStyleSheet()
+    custom_style = ParagraphStyle(
+        'CustomStyle',
+        parent=styles['Normal'],
+        fontSize=10,
+        leading=14,  # Line spacing
+        spaceAfter=10,  # Space between paragraphs
+        wordWrap='CJK'  # Ensures proper word wrapping
+    )
+    
+    # Split content into paragraphs and create Paragraph objects
+    paragraphs = content.split('\n')
+    for text in paragraphs:
+        if text.strip():  # Only process non-empty lines
+            p = Paragraph(text, custom_style)
+            story.append(p)
+            story.append(Spacer(1, 2))  # Add small space between paragraphs
+    
+    # Build the PDF
+    doc.build(story)
+
+
+def save_in_html(content, filename="output.html"):
+    html_content = markdown(content)  # Convert Markdown to HTML
+    with open(filename, 'w', encoding='utf-8') as f:
+        f.write(html_content)
+
+
+def main():
     parser = argparse.ArgumentParser(description="Run extended web searches.")
     parser.add_argument("query", type=str, help="The initial search query.")
     parser.add_argument("-m", "--max_searches", type=int, default=5, help="Maximum number of searches to perform.")
-    parser.add_argument("-s", "--save", action="store_true", help="Save the report as markdown file.")
-    #parser.add_argument("-p", "--use_perplexity", action="store_true", help="Enable perplexity for search expansion.")
+    parser.add_argument("-f", "--format", type=str, choices=['markdown', 'csv', 'excel', 'pdf', 'html'], default='markdown', help="Choose output format.")
 
     args = parser.parse_args()
 
+    # Get the report text from the research process
     report_text = run_research(args.query, args.max_searches)
 
+    # Save output in chosen format
+    if args.format == 'markdown':
+        save_in_markdown(report_text)  # Save the actual report content
+    elif args.format == 'csv':
+        save_in_csv([{'result': report_text}])  # Wrap content in dict for CSV
+    elif args.format == 'excel':
+        save_in_excel([{'result': report_text}])  # Wrap content in dict for Excel
+    elif args.format == 'pdf':
+        save_in_pdf(report_text)
+    elif args.format == 'html':
+        save_in_html(report_text)
+
+    print(f"Output saved as {args.format}")
+'''
     if args.save:
         with open("markdown_output.md", "w") as f:
             f.write(report_text)
 
     cprint(report_text)
-
+'''
 
 if __name__ == "__main__":
     main()
