@@ -25,6 +25,22 @@ def use_reasoning(content: str) -> str:
     newModel = ReasoningModel()
     return newModel(content)
 
+def get_article(search_query: str) -> str:
+    text = f"""
+    We need help with writing a two page article about the following topic.
+    Please help me with this article. Provide me with some conent and methods to achieve this article.
+
+    # Here is the question/topic:
+    {search_query}
+    """
+
+    reasoning_response = use_reasoning(text)
+
+    task = cf.Task(f"Write an article based on a given topic. Use the following information to help you with the text: {reasoning_response}")
+
+    article_output = task.run()
+
+    return article_output
 
 def main():
 
@@ -47,7 +63,6 @@ def main():
     task = cf.Task(f"Write an article based on a given topic. Use the following information to help you with the text: {reasoning_response}")
 
     article_output = task.run()
-
 
     console_print(article_output)
 

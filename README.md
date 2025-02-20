@@ -23,3 +23,26 @@ The output of the script will be saved as markdown file called `markdown_output.
 With `-m` you can set how many individual searcher to perform (default = 5).
 
 
+## Run PyQt6 GUI
+
+To run the GUI, execute the following command:
+
+```bash
+
+# Using UV:
+uv run gui.py
+
+# Without UV:
+
+# activate venv and run
+source .venv/bin/activate 
+python3 gui.py
+```
+
+## Run Streamlit APP
+
+To run the Streamlit APP, execute the following command:
+
+```bash
+uv run streamlit_app.py
+```
