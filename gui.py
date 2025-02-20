@@ -1,9 +1,11 @@
 import sys
 import os
+import json
+import webbrowser
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QVBoxLayout, QHBoxLayout, QLabel,
     QLineEdit, QPushButton, QComboBox, QTextEdit, QProgressBar,
-    QFileDialog, QWidget, QMessageBox, QSpinBox
+    QFileDialog, QWidget, QMessageBox, QSpinBox, QCheckBox
 )
 from PyQt6.QtCore import QThread, pyqtSignal
 from extensive_search import run_research, save_in_markdown, save_in_csv, save_in_excel, save_in_pdf, save_in_html
@@ -14,7 +16,7 @@ class ResearchWorker(QThread):
     finished = pyqtSignal(str)
     error = pyqtSignal(str)
     log = pyqtSignal(str)
-    preview = pyqtSignal(str)
+    #preview = pyqtSignal(str)
 
     def __init__(self, query, output_format, save_path, num_searches):
         super().__init__()
@@ -34,7 +36,7 @@ class ResearchWorker(QThread):
             self.log.emit("Research completed, preparing to save results...")
 
             # Emit results for preview
-            self.preview.emit(results)
+            #self.preview.emit(results)
 
             # Create full file path
             file_path = os.path.join(self.save_path, f"results.{self.output_format}")
@@ -77,6 +79,7 @@ class DeepResearchGUI(QMainWindow):
         # Input: Search Query
         input_layout.addWidget(QLabel("Search Query:"))
         self.query_input = QLineEdit()
+        self.query_input.returnPressed.connect(self.start_search)  # Start search on Enter key
         input_layout.addWidget(self.query_input)
 
         # Input: Number of Individual Searches
@@ -102,6 +105,10 @@ class DeepResearchGUI(QMainWindow):
         save_location_layout.addWidget(save_browse_button)
         input_layout.addLayout(save_location_layout)
 
+        # Checkbox: Open File After Save
+        self.open_file_checkbox = QCheckBox("Open file after save")
+        input_layout.addWidget(self.open_file_checkbox)
+
         # Theme Selector
         input_layout.addWidget(QLabel("Select Theme:"))
         self.theme_selector = QComboBox()
@@ -109,13 +116,6 @@ class DeepResearchGUI(QMainWindow):
         self.theme_selector.currentTextChanged.connect(self.change_theme)
         input_layout.addWidget(self.theme_selector)
 
-        # Buttons: Start Search & Exit
-        self.start_button = QPushButton("Start Search")
-        self.start_button.clicked.connect(self.start_search)
-        exit_button = QPushButton("Exit")
-        exit_button.clicked.connect(self.close)
-        buttons_layout.addWidget(self.start_button)
-        buttons_layout.addWidget(exit_button)
 
         # Output: Log/Console
         output_layout.addWidget(QLabel("Logs:"))
@@ -137,6 +137,10 @@ class DeepResearchGUI(QMainWindow):
         # Initialize worker as None
         self.worker = None
 
+        # Load saved settings
+        self.load_settings()
+        self.change_theme(self.theme_selector.currentText())
+
     def browse_save_location(self):
         directory = QFileDialog.getExistingDirectory(self, "Select Save Location")
         if directory:
@@ -153,8 +157,9 @@ class DeepResearchGUI(QMainWindow):
             return
 
         # Disable the start button while processing
-        self.start_button.setEnabled(False)
+        #self.start_button.setEnabled(False)
         self.progress_bar.setValue(0)
+        self.open_file_checkbox.setEnabled(False)
 
         # Create and setup the worker thread
         self.worker = ResearchWorker(query, output_format, save_path, num_searches)
@@ -162,7 +167,7 @@ class DeepResearchGUI(QMainWindow):
         self.worker.finished.connect(self.on_complete)
         self.worker.error.connect(self.on_error)
         self.worker.log.connect(self.log_message)
-        self.worker.preview.connect(self.preview_results)
+        #self.worker.preview.connect(self.preview_results)
 
         # Start the worker thread
         self.worker.start()
@@ -173,18 +178,26 @@ class DeepResearchGUI(QMainWindow):
     def log_message(self, message):
         self.log_output.append(message)
 
-    def preview_results(self, results):
-        QMessageBox.information(self, "Result Preview", results)
+    #def preview_results(self, results):
+       # QMessageBox.information(self, "Result Preview", results)
 
     def on_complete(self, file_path):
+        self.log_output.append("\n==========================")
         self.log_output.append(f"Search completed. Results saved at: {file_path}")
-        self.start_button.setEnabled(True)
+        self.log_output.append("==========================")
+        #self.start_button.setEnabled(True)
+
+        # Open the file if the checkbox is checked
+        if self.open_file_checkbox.isChecked():
+            webbrowser.open(file_path)
+        
+        self.open_file_checkbox.setEnabled(True)
 
     def on_error(self, error_message):
         QMessageBox.critical(self, "Error", f"An error occurred: {error_message}")
         self.log_output.append(f"Error: {error_message}")
         self.progress_bar.setValue(0)
-        self.start_button.setEnabled(True)
+        #self.start_button.setEnabled(True)
 
     def change_theme(self, theme):
         if theme == "Dark":
@@ -249,6 +262,32 @@ class DeepResearchGUI(QMainWindow):
                     text-align: center;
                 }
             """)
+
+
+    def save_settings(self):
+        settings = {
+            "theme": self.theme_selector.currentText(),
+            "output_format": self.format_selector.currentText(),
+            "save_location": self.save_location.text(),
+            "num_searches": self.num_searches_input.value()
+        }
+        with open("settings.json", "w") as f:
+            json.dump(settings, f)
+
+    def load_settings(self):
+        try:
+            with open("settings.json", "r") as f:
+                settings = json.load(f)
+                self.theme_selector.setCurrentText(settings.get("theme", "Light"))
+                self.format_selector.setCurrentText(settings.get("output_format", "markdown"))
+                self.save_location.setText(settings.get("save_location", ""))
+                self.num_searches_input.setValue(settings.get("num_searches", 5))
+        except FileNotFoundError:
+            pass
+
+    def closeEvent(self, event):
+        self.save_settings()
+        event.accept()
 
 
 if __name__ == "__main__":
