@@ -21,4 +21,7 @@ dependencies = [
     "ipywidgets>=8.1.5",
     "aiohttp>=3.11.12",
     "beautifulsoup4>=4.13.3",
+    "pyqt6>=6.8.1",
+    "reportlab>=4.3.1",
+    "markdown2>=2.5.3",
 ]
