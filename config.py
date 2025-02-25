@@ -42,6 +42,9 @@ class Config(BaseSettings):
     OPENROUTER_DEEPSEEK_R1_FREE: str = Field(default="deepseek/deepseek-r1:free") # OpenRouter (free)
     OPENROUTER_DEEPSEEK_R1: str = Field(default="deepseek/deepseek-r1") # OpenRouter (paid)
     OPENROUTER_PERPLEXITY_SONAR_REASONING: str = Field(default="perplexity/sonar-reasoning") # OpenRouter (paid)
+    PERPLEXITY_DEEP_RESEARCH : str = Field(default="perplexity/sonar-deep-research") # OpenRouter (paid)
+
+
 
     BASEAGENT_MODEL:str = Field(default='gemini-2.0-flash') 
 

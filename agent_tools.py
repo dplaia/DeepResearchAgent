@@ -402,6 +402,33 @@ def perplexity_sonar_reasoning(search_query: str) -> PerplexityResult | None:
         print(f"Perplexity search failed: {e}")
         return None
 
+
+def perplexity_deep_research(search_query: str):
+    messages = [
+        {
+            "role": "system",
+            "content": (
+                "Write a well-written report based on the search results."
+            ),
+        },
+        {   
+            "role": "user",
+            "content": search_query,
+        },
+    ]
+
+    client = OpenAI(api_key=config.PERPLEXITY_API_KEY, base_url=config.PERPLEXITY_BASE_URL)
+
+    # chat completion without streaming
+    response = client.chat.completions.create(
+        model=config.PERPLEXITY_DEEP_RESEARCH,
+        messages=messages,
+    )
+    print(response)
+
+    return response
+
+
 async def papers_with_code_search_async(query: str, items_per_page: int = 200) -> dict | None:
     """Async version of papers with code search"""
     try:
