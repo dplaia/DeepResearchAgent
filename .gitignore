@@ -189,3 +189,4 @@ markdown_output.md
 *.html
 output.md
 *markdown
+tasks.db
