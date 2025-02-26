@@ -8,7 +8,6 @@ import json
 from firecrawl import FirecrawlApp
 from agent_utils import *
 from pydantic import BaseModel, Field
-from pydantic_ai.result import RunResult
 from pydantic_ai import Agent, RunContext
 from pydantic_ai.models.gemini import GeminiModel
 from pydantic_ai.models import Model
@@ -35,10 +34,10 @@ class BasicAgent():
             result_type=result_type,
             system_prompt=system_prompt)
 
-    async def __call__(self, user_input) -> RunResult:
+    async def __call__(self, user_input):
         return await self.agent.run(user_input)
 
-    async def run(self, user_input) -> RunResult:
+    async def run(self, user_input):
         return await self.agent.run(user_input)
 
 class ReasoningModelAsync:

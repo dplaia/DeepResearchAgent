@@ -11,7 +11,6 @@ import requests
 import json
 from pydantic import BaseModel, Field
 from crawl4ai import *
-from pydantic_ai.result import RunResult
 from pydantic_ai import Agent, RunContext
 from pydantic_ai.models import Model
 from pydantic_ai.models.gemini import GeminiModel

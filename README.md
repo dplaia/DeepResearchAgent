@@ -8,6 +8,9 @@ In order to scrape webpages using crawl4AI with Playwright, you need to install 
 ```bash
 source .venv/bin/activate
 playwright install
+
+# Controlflow needs to be installed like this:
+uv pip install controlflow
 ```
 
 ## Usage
