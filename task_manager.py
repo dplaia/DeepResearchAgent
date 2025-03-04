@@ -217,6 +217,30 @@ class TaskManager:
             WHERE created_at < ? AND status IN (?, ?, ?)
             ''', (cutoff_time, TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED))
             conn.commit()
+    
+    def remove_task(self, task_id: str) -> bool:
+        """Remove a specific task from the database.
+        
+        Args:
+            task_id: The ID of the task to remove
+            
+        Returns:
+            bool: True if the task was successfully removed, False otherwise
+        """
+        with self.tasks_lock, sqlite3.connect(self.db_path) as conn:
+            # Check if the task exists
+            task = conn.execute('SELECT id FROM tasks WHERE id = ?', (task_id,)).fetchone()
+            if not task:
+                return False
+            
+            # If the task is running, cancel it first
+            if task_id in self.running_tasks:
+                self.cancel_task(task_id)
+            
+            # Delete the task from the database
+            conn.execute('DELETE FROM tasks WHERE id = ?', (task_id,))
+            conn.commit()
+            return True
 
 # Create a singleton instance
 task_manager = TaskManager()

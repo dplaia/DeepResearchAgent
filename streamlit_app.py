@@ -8,7 +8,6 @@ import pandas as pd
 
 from agent_tools import BasicSearchModel, ReasoningModel
 from extensive_search import run_research
-from write_article import get_article
 from task_manager import task_manager, TaskStatus
 
 st.set_page_config(page_title="DeepResearchHS", 
@@ -51,69 +50,58 @@ def main():
         search_query_text = st.text_area("Search Query:", height=180)
         
         # add combobox for model selection
-        model_selector = st.selectbox("Mode:", ["Quick Search", "Get Article", "DeepResearch"])
+        model_selector = st.selectbox("Mode:", ["Quick Search (Google)", "DeepResearch (Perplexity)", "DeepResearch (Google)"])
         
-        col1, col2 = st.columns([1, 3])
-        with col1:
-            button = st.button("Start DeepSearch")
-        with col2:
-            queue_button = st.button("Add to Queue")
+        # Dynamic button text based on selected mode
+        button_text = "Search" if model_selector == "Quick Search (Google)" else "Run Deep Search"
+        button = st.button(button_text)
 
-        if button:
-            # Direct execution (original behavior)
-            with st.spinner(f"Running {model_selector}..."):
-                response = ""
-                response_title = ""
-
-                if model_selector == "Quick Search":
+        if button and search_query_text:
+            if model_selector == "Quick Search (Google)":
+                # Direct execution for Quick Search
+                with st.spinner(f"Running {model_selector}..."):
                     searchAgent = BasicSearchModel() 
                     response = searchAgent(search_query_text)
                     response_title = "Quick Search Result"
+                    
+                    st.markdown(f"## {response_title}")
+                    st.markdown(response)
+                    
+                    # Add download button for the result
+                    st.download_button(
+                        label="Download as Markdown",
+                        data=response,
+                        file_name=f"{model_selector.lower().replace(' ', '_')}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md",
+                        mime="text/markdown"
+                    )
+            else:
+                # Add task to queue for other modes
+                try:
+                    # Add task to queue
+                    task_id = task_manager.add_task(search_query_text, model_selector)
+                    
+                    # Start the task in the background
+                    if model_selector == "Perplexitiy DeepSearch":
+                        #task_manager.start_task(task_id, get_article, search_query_text)
+                        pass
+                    elif model_selector == "Google DeepResearch":
+                        task_manager.start_task(task_id, run_research, search_query_text)
+                    
+                    st.success(f"Query added to Task Queue! Check the Task Queue tab for progress.")
+                    
+                    # Create a notification
+                    st.balloons()
+                except ValueError as e:
+                    st.error(str(e))
 
-                elif model_selector == "Get Article":
-                    response = get_article(search_query_text)
-                    response_title = "Article Result"
-                elif model_selector == "DeepResearch":
-                    response = run_research(search_query_text)
-                    response_title = "DeepResearch Result"
-
-                st.markdown(f"## {response_title}")
-                st.markdown(response)
-                
-                # Add download button for the result
-                st.download_button(
-                    label="Download as Markdown",
-                    data=response,
-                    file_name=f"{model_selector.lower().replace(' ', '_')}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md",
-                    mime="text/markdown"
-                )
-
-        if queue_button and search_query_text:
-            try:
-                # Add task to queue
-                task_id = task_manager.add_task(search_query_text, model_selector)
-                
-                # Start the task in the background
-                if model_selector == "Quick Search":
-                    task_manager.start_task(task_id, lambda query: BasicSearchModel()(query), search_query_text)
-                elif model_selector == "Get Article":
-                    task_manager.start_task(task_id, get_article, search_query_text)
-                elif model_selector == "DeepResearch":
-                    task_manager.start_task(task_id, run_research, search_query_text)
-                
-                st.success(f"Task added to queue! Check the Task Queue tab for progress.")
-                
-                # Create a notification
-                st.balloons()
-            except ValueError as e:
-                st.error(str(e))
+        # Queue button removed as requested
     
     with tab2:
         st.header("Task Queue")
         
         # Add refresh button
         if st.button("Refresh Task List"):
-            st.experimental_rerun()
+            st.rerun()
         
         # Get all tasks
         tasks = task_manager.get_all_tasks()
@@ -157,7 +145,7 @@ def main():
                         if st.button(f"Cancel Task", key=f"cancel_{task['id']}"):
                             if task_manager.cancel_task(task['id']):
                                 st.success("Task cancelled successfully!")
-                                st.experimental_rerun()
+                                st.rerun()
                             else:
                                 st.error("Failed to cancel task.")
                     
@@ -179,6 +167,14 @@ def main():
                     # Show error for failed tasks
                     if task['status'] == TaskStatus.FAILED and task['error']:
                         st.error(f"Error: {task['error']}")
+                    
+                    # Add a button to remove the task
+                    if st.button(f"Remove Task", key=f"remove_{task['id']}"):
+                        if task_manager.remove_task(task['id']):
+                            st.success("Task removed successfully!")
+                            st.rerun()
+                        else:
+                            st.error("Failed to remove task.")
 
 if __name__ == "__main__":
     main()
