@@ -1,8 +1,5 @@
 import streamlit as st
 import numpy as np
-import time
-import threading
-import os
 from datetime import datetime
 import pandas as pd
 
@@ -84,7 +81,7 @@ def main():
                     if model_selector == "Perplexitiy DeepSearch":
                         #task_manager.start_task(task_id, get_article, search_query_text)
                         pass
-                    elif model_selector == "Google DeepResearch":
+                    elif model_selector == "DeepResearch (Google)":
                         task_manager.start_task(task_id, run_research, search_query_text)
                     
                     st.success(f"Query added to Task Queue! Check the Task Queue tab for progress.")
@@ -152,7 +149,8 @@ def main():
                     # Show result for completed tasks
                     if task['status'] == TaskStatus.COMPLETED and task['result']:
                         st.markdown("### Result:")
-                        with st.expander("View Result"):
+                        # Using a toggle instead of nested expander
+                        if st.toggle("Show/Hide Result", key=f"toggle_result_{task['id']}"):
                             st.markdown(task['result'])
                         
                         # Add download button
